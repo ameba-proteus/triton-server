@@ -3,8 +3,6 @@ package com.amebame.triton.server;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 
 import com.amebame.triton.exception.TritonRuntimeException;
@@ -13,8 +11,6 @@ import com.amebame.triton.util.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class TritonServerMethod {
-	
-	private static final Logger log = LogManager.getLogger(TritonServerMethod.class);
 	
 	private Object object;
 	
@@ -58,11 +54,9 @@ public class TritonServerMethod {
 		} catch (InvocationTargetException e) {
 			// throw as generic error
 			Throwable cause = e.getCause();
-			log.error(e.getMessage(), e);
 			throw new TritonRuntimeException(cause.getMessage(), cause);
 		} catch (IllegalAccessException | IllegalArgumentException e) {
 			// throw as error
-			log.error(e.getMessage(), e);
 			throw new TritonRuntimeException(e.getMessage());
 		}
 		

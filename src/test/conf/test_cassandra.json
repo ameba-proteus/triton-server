@@ -1,0 +1,9 @@
+{
+	"cassandra": {
+		"clusters": {
+			"Test Cluster": {
+				"seeds": ["127.0.0.1"]
+			}
+		}
+	}
+}

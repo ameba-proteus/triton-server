@@ -29,6 +29,10 @@ public class TritonModule extends AbstractModule {
 	public TritonModule(String configPath) {
 		this.configPath = configPath;
 	}
+	
+	public TritonModule(TritonServerConfiguration config) {
+		this.config = config;
+	}
 
 	@Override
 	protected void configure() {
@@ -60,7 +64,7 @@ public class TritonModule extends AbstractModule {
 			} catch (IOException e) {
 				throw new TritonRuntimeException(e.getMessage(), e);
 			}
-		} else {
+		} else if (config == null) {
 			config = new TritonServerConfiguration();
 		}
 		bind(TritonServerConfiguration.class).toInstance(config);

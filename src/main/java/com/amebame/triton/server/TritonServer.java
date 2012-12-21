@@ -28,6 +28,14 @@ public class TritonServer {
 	public TritonServer() {
 	}
 	
+	public void setPort(int port) {
+		this.port = port;
+	}
+	
+	public void setConfigPath(String configPath) {
+		this.configPath = configPath;
+	}
+	
 	public void start() {
 		log.info("starting triton server");
 		try {

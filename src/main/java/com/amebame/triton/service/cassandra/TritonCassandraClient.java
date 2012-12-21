@@ -51,9 +51,8 @@ public class TritonCassandraClient implements TritonCleaner {
 				if (context == null) {
 					TritonCassandraClusterConfiguration clusterConfig = config.getCluster(clusterName);
 					// return null if cluster is not defined
-					if (clusterName == null) {
-						log.warn("Cluster has not been configured for {}", clusterName);
-						return null;
+					if (clusterConfig == null) {
+						throw new TritonCassandraException("cluster has not been configured for " + clusterName);
 					}
 					// build the astyanax context
 					context = new AstyanaxContext.Builder()
@@ -62,6 +61,7 @@ public class TritonCassandraClient implements TritonCleaner {
 					.withAstyanaxConfiguration(clusterConfig.getAstyanaxConfig())
 					.withConnectionPoolConfiguration(clusterConfig.getPoolConfig())
 					.buildKeyspace(ThriftFamilyFactory.getInstance());
+					context.start();
 					keyspacemap.put(key, context);
 				}
 			} finally {

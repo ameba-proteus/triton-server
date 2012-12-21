@@ -127,10 +127,6 @@
 					<artifactId>jamm</artifactId>
 				</exclusion>
 				<exclusion>
-					<groupId>com.github.stephenc.high-scale-lib</groupId>
-					<artifactId>high-scale-lib</artifactId>
-				</exclusion>
-				<exclusion>
 					<groupId>com.yammer.metrics</groupId>
 					<artifactId>metrics-core</artifactId>
 				</exclusion>
@@ -170,15 +166,24 @@
 			<version>${log4j.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>org.apache.logging.log4j.adapters</groupId>
+			<artifactId>log4j12-api</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		
+		<!-- Command Line -->
+		<dependency>
 			<groupId>com.beust</groupId>
 			<artifactId>jcommander</artifactId>
 			<version>${jcommander.version}</version>
 		</dependency>
+		
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
+		
 	</dependencies>
 </project>
