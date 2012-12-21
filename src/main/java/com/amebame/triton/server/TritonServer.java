@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
+import com.amebame.triton.service.TritonHeartbeat;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.google.inject.Guice;
@@ -32,6 +33,8 @@ public class TritonServer {
 		log.info("starting triton server");
 		try {
 			injector = Guice.createInjector(new TritonModule(configPath));
+			TritonServerContext context = injector.getInstance(TritonServerContext.class);
+			context.addServerMethod(injector.getInstance(TritonHeartbeat.class));
 			ServerBootstrap bootstrap = injector.getInstance(ServerBootstrap.class);
 			ChannelPipelineFactory pipelineFactory = injector.getInstance(TritonServerPipelineFactory.class);
 			bootstrap.setPipelineFactory(pipelineFactory);
