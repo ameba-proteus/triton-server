@@ -7,10 +7,12 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 
 import com.amebame.triton.exception.TritonJsonException;
-import com.amebame.triton.exception.TritonRuntimeException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Json {
 	
@@ -63,8 +65,52 @@ public class Json {
 		try {
 			return MAPPER.writeValueAsBytes(target);
 		} catch (JsonProcessingException e) {
-			throw new TritonRuntimeException(e);
+			throw new TritonJsonException(e);
 		}
+	}
+	
+	/**
+	 * Convert {@link JsonNode} to specific object instance
+	 * @param node
+	 * @param clazz
+	 * @return
+	 */
+	public static final <E> E convert(JsonNode node, Class<E> clazz) {
+		try {
+			return MAPPER.treeToValue(node, clazz);
+		} catch (JsonProcessingException e) {
+			throw new TritonJsonException(e);
+		}
+	}
+	
+	/**
+	 * Convert {@link ChannelBuffer} to specific object instance as JSON buffer.
+	 * @param buffer
+	 * @param clazz
+	 * @return
+	 */
+	public static final <E> E convert(ChannelBuffer buffer, Class<E> clazz) {
+		try {
+			return MAPPER.readValue(new ChannelBufferInputStream(buffer), clazz);
+		} catch (IOException e) {
+			throw new TritonJsonException(e);
+		}
+	}
+	
+	/**
+	 * Create an empty object node
+	 * @return
+	 */
+	public static final ObjectNode object() {
+		return JsonNodeFactory.instance.objectNode();
+	}
+	
+	/**
+	 * Create an empty array node
+	 * @return
+	 */
+	public static final ArrayNode array() {
+		return JsonNodeFactory.instance.arrayNode();
 	}
 
 }

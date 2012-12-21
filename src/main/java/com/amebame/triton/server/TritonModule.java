@@ -43,6 +43,7 @@ public class TritonModule extends AbstractModule {
 	}
 	
 	private void configureTriton() {
+		bind(TritonServerSetup.class).asEagerSingleton();
 	}
 	
 	private void configureConfig() {

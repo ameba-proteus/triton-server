@@ -44,7 +44,9 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 				sendError(message.getCallId(), channel, "method " + name + " does not exist");
 				return;
 			}
-			Object result = method.invoke();
+			JsonNode body = node.get("body");
+			// invoke reflected method
+			Object result = method.invoke(channel, message, body);
 			// send reply
 			sendReply(message.getCallId(), channel, result);
 			

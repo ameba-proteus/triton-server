@@ -13,6 +13,8 @@ import com.amebame.triton.entity.TritonCall;
 import com.amebame.triton.entity.TritonFuture;
 import com.amebame.triton.exception.TritonConnectException;
 import com.amebame.triton.exception.TritonRuntimeException;
+import com.amebame.triton.util.Json;
+import com.fasterxml.jackson.databind.JsonNode;
 
 public class TritonClient {
 	
@@ -20,6 +22,8 @@ public class TritonClient {
 	private ChannelPipeline pipeline;
 	private ChannelFactory channelFactory;
 	private Channel channel;
+	
+	private static final JsonNode EMPTY_NODE = Json.object();
 	
 	public TritonClient() {
 		this(new TritonClientConfiguration());
@@ -86,6 +90,17 @@ public class TritonClient {
 		} else {
 			// TODO error
 		}
+	}
+	
+	/**
+	 * send only method to the server with future object.
+	 * future will be invoked when server send reply
+	 * @param name
+	 * @param data
+	 * @return
+	 */
+	public TritonFuture send(String name) {
+		return send(name, EMPTY_NODE);
 	}
 	
 	/**

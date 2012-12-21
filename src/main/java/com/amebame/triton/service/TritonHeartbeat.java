@@ -8,6 +8,12 @@ public class TritonHeartbeat {
 	}
 
 	@TritonMethod("triton.heartbeat")
-	public void ping() {
+	public long ping() {
+		return (int) (System.currentTimeMillis() / 1000L);
+	}
+	
+	@TritonMethod("triton.echo")
+	public String echo(String text) {
+		return text;
 	}
 }

@@ -6,6 +6,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 import com.amebame.triton.util.Json;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Triton Message
@@ -95,6 +96,23 @@ public class TritonMessage {
 	 */
 	public ChannelBuffer getBody() {
 		return body;
+	}
+	
+	/**
+	 * Get body as data
+	 * @param clazz
+	 * @return
+	 */
+	public <E> E getBody(Class<E> clazz) {
+		return Json.convert(body, clazz);
+	}
+	
+	/**
+	 * Get body as json tree
+	 * @return
+	 */
+	public JsonNode getBodyJson() {
+		return Json.tree(body);
 	}
 	
 	/**

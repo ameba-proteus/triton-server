@@ -1,8 +1,14 @@
 package com.amebame.triton.service.cassandra;
 
-public class TritonCassandraMethods {
+import javax.inject.Inject;
 
-	public TritonCassandraMethods() {
+public class TritonCassandraMethods {
+	
+	private TritonCassandraClient client;
+
+	@Inject
+	public TritonCassandraMethods(TritonCassandraClient client) {
+		this.client = client;
 	}
 
 }
