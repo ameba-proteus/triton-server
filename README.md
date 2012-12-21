@@ -40,15 +40,24 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "cluster": "Test Cluster",
 	  "keyspace": "keyspace"
 	}
+---
+	true
 
 #### list clusters
 	cassandra.cluster.list
 	{}
+---
+	[{
+	  "name": "Test Cluster"
+	}]
 
 #### list keyspaces
 	cassandra.keyspace.list
 	{
 	  "cluster": "Test Cluster"
+	}
+---
+	{
 	}
 
 #### create column family
@@ -59,6 +68,8 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "columnfamily": "family",
 	  "
 	}
+---
+	true
 
 #### drop column family
 	cassandra.columnfamily.drop
@@ -71,12 +82,17 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "key_validation_class": "UTF8Type",
 	  "read_repair_chance": 0.1
 	}
+---
+	true
 
 #### list column families
 	cassandra.columnfamily.list
 	{
 	  "cluster": "Test Cluster",
 	  "keyspce": "keyspace"
+	}
+---
+	{
 	}
 
 #### save columns
@@ -92,8 +108,11 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	        "child": "can store json structure"
 	      },
 	    }
-	  }
+	  },
+	  "consistency": "quorum"
 	}
+---
+	true
 
 #### get columns
 	cassandra.column.get
@@ -101,9 +120,10 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "cluster": "Test Cluster",
 	  "keyspace": "keyspace",
 	  "keys": ["key1","key2"],
-	  "columns": ["column1", "column2"]
+	  "columns": ["column1", "column2"],
+	  "consistency": "one"
 	}
-result
+---
 	{
 	}
 
@@ -115,6 +135,8 @@ result
 	  "keys": ["key1", "key2"],
 	  "columns": ["column1","column2","column3"]
 	}
+---
+	true
 
 ## HBase
 
