@@ -6,6 +6,8 @@ public class TritonClientConfiguration {
 	
 	private TritonNettyConfiguration netty;
 	
+	private long commandTimeout = 5000L;
+	
 	public TritonClientConfiguration() {
 		netty = new TritonNettyConfiguration();
 		netty.setBoss(1);
@@ -18,6 +20,14 @@ public class TritonClientConfiguration {
 	
 	public void setNetty(TritonNettyConfiguration netty) {
 		this.netty = netty;
+	}
+	
+	public long getCommandTimeout() {
+		return commandTimeout;
+	}
+	
+	public void setCommandTimeout(long commandTimeout) {
+		this.commandTimeout = commandTimeout;
 	}
 	
 }

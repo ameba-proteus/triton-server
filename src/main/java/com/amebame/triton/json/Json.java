@@ -1,4 +1,4 @@
-package com.amebame.triton.util;
+package com.amebame.triton.json;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +16,19 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Json {
 	
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	private static final ObjectMapper MAPPER = createMapper();
+	
+	/**
+	 * Create common {@link ObjectMapper}
+	 * @return
+	 */
+	private static ObjectMapper createMapper() {
+		ObjectMapper mapper = new ObjectMapper();
+		// set feature
+		// set serializer/deserializer
+		
+		return mapper;
+	}
 	
 	/**
 	 * Get common {@link ObjectMapper}

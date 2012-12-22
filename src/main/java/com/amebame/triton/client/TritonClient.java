@@ -13,7 +13,7 @@ import com.amebame.triton.entity.TritonCall;
 import com.amebame.triton.entity.TritonFuture;
 import com.amebame.triton.exception.TritonConnectException;
 import com.amebame.triton.exception.TritonRuntimeException;
-import com.amebame.triton.util.Json;
+import com.amebame.triton.json.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class TritonClient {
@@ -113,7 +113,7 @@ public class TritonClient {
 	public TritonFuture send(String name, Object data) {
 		if (channel != null && channel.isOpen()) {
 			TritonCall call = new TritonCall(name, data);
-			TritonFuture future = new TritonFuture(call);
+			TritonFuture future = new TritonFuture(call, context.getConfig().getCommandTimeout());
 			context.addFuture(future);
 			// send message to the server
 			channel.write(call.build());

@@ -5,7 +5,7 @@ import java.util.Arrays;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
-import com.amebame.triton.util.Json;
+import com.amebame.triton.json.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**

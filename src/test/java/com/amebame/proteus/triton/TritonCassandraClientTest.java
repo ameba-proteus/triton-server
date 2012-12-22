@@ -13,6 +13,7 @@ import com.amebame.triton.exception.TritonConnectException;
 import com.amebame.triton.exception.TritonException;
 import com.amebame.triton.protocol.TritonMessage;
 import com.amebame.triton.server.TritonServer;
+import com.amebame.triton.service.cassandra.entity.CreateKeyspace;
 import com.amebame.triton.service.cassandra.entity.DropKeyspace;
 
 public class TritonCassandraClientTest {
@@ -47,15 +48,32 @@ public class TritonCassandraClientTest {
 	}
 	
 	@Test
-	public void testDropCreateKeyspace() throws TritonException {
+	public void testCreateKeyspace() throws TritonException {
 		client.open("127.0.0.1", 4848);
+		// drop before
 		DropKeyspace drop = new DropKeyspace();
 		drop.setCluster("Test Cluster");
 		drop.setKeyspace("triton_test");
 		TritonFuture future = client.send("cassandra.keyspace.drop", drop);
-		TritonMessage result = future.getResult(1000L);
-		System.out.println(result.getBodyJson());
-		assertTrue(result.isError());
+		future.await();
+		
+		// check list
+		
+		// create
+		CreateKeyspace create = new CreateKeyspace();
+		create.setCluster("Test Cluster");
+		create.setKeyspace("triton_test");
+		create.setReplicationFactor(1);
+		future = client.send("cassandra.keyspace.create", create);
+		TritonMessage message = future.getResult();
+		assertTrue(message.isReply());
+		assertFalse(message.isError());
+		
+		// check list
+	}
+	
+	@Test
+	public void testCreateColumnFamily() {
 	}
 	
 }

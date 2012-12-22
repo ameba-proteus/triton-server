@@ -4,7 +4,7 @@ public class TritonError {
 	
 	private String message;
 	
-	public TritonError(Exception e) {
+	public TritonError(Throwable e) {
 		this.message = e.getMessage();
 	}
 	

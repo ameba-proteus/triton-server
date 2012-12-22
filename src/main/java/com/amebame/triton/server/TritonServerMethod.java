@@ -6,8 +6,8 @@ import java.lang.reflect.Method;
 import org.jboss.netty.channel.Channel;
 
 import com.amebame.triton.exception.TritonRuntimeException;
+import com.amebame.triton.json.Json;
 import com.amebame.triton.protocol.TritonMessage;
-import com.amebame.triton.util.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class TritonServerMethod {

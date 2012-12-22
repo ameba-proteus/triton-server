@@ -15,9 +15,9 @@ import org.jboss.netty.util.ThreadNameDeterminer;
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.config.TritonServerConfiguration;
 import com.amebame.triton.exception.TritonRuntimeException;
+import com.amebame.triton.json.Json;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
 import com.amebame.triton.service.cassandra.TritonCassandraSetup;
-import com.amebame.triton.util.Json;
 import com.amebame.triton.util.NamedThreadFactory;
 import com.google.inject.AbstractModule;
 

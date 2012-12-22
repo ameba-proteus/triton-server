@@ -11,8 +11,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 import com.amebame.triton.entity.TritonError;
+import com.amebame.triton.json.Json;
 import com.amebame.triton.protocol.TritonMessage;
-import com.amebame.triton.util.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class TritonServerHandler extends SimpleChannelUpstreamHandler {
@@ -51,10 +51,20 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 			sendReply(message.getCallId(), channel, result);
 			
 		} catch (Exception e) {
+			// get root cause
+			Throwable ex = e;
+			// prevent infinite loop to set maximum depth
+			int max = 10;
+			while (max-- > 0) {
+				if (ex.getCause() == null || ex.getCause() == ex) {
+					break;
+				}
+				ex = ex.getCause();
+			}
 			// if failed to parse
-			log.warn("method execution failed", e);
+			log.warn("method execution failed", ex);
 			// return client as error
-			sendError(message.getCallId(), channel, e);
+			sendError(message.getCallId(), channel, ex);
 		}
 	}
 	
@@ -77,7 +87,7 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 	 * @param channel
 	 * @param e
 	 */
-	private void sendError(int callId, Channel channel, Exception e) {
+	private void sendError(int callId, Channel channel, Throwable e) {
 		if (callId > 0) {
 			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(e));
 			channel.write(message);

@@ -15,10 +15,13 @@ public class TritonFuture {
 	private TritonMessage result;
 	
 	private CountDownLatch latch;
+	
+	private long defaultTimeout;
 
-	public TritonFuture(TritonCall call) {
+	public TritonFuture(TritonCall call, long defaultTimeout) {
 		this.call = call;
 		this.latch = new CountDownLatch(1);
+		this.defaultTimeout = defaultTimeout;
 	}
 	
 	/**
@@ -27,6 +30,13 @@ public class TritonFuture {
 	 */
 	public int getCallId() {
 		return call.getCallId();
+	}
+	
+	/**
+	 * Waiting the server response with default timeout.
+	 */
+	public void await() {
+		await(defaultTimeout);
 	}
 
 	/**
@@ -48,6 +58,14 @@ public class TritonFuture {
 	public void setResult(TritonMessage result) {
 		this.result = result;
 		latch.countDown();
+	}
+	
+	/**
+	 * Get the result with default timeout
+	 * @return
+	 */
+	public TritonMessage getResult() {
+		return getResult(defaultTimeout);
 	}
 	
 	/**
