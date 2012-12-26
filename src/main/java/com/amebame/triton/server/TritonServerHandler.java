@@ -45,6 +45,9 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 				return;
 			}
 			JsonNode body = node.get("body");
+			if (log.isTraceEnabled()) {
+				log.trace("message received {} - {}", name, body.toString());
+			}
 			// invoke reflected method
 			Object result = method.invoke(channel, message, body);
 			// send reply
