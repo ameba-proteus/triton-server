@@ -1,34 +1,59 @@
 package com.amebame.triton.service.cassandra;
 
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.inject.Inject;
 
+import org.apache.cassandra.dht.IPartitioner;
+import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.dht.Token.TokenFactory;
+import org.apache.cassandra.utils.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 
+import com.amebame.triton.client.cassandra.method.GetColumns;
+import com.amebame.triton.client.cassandra.method.RemoveColumns;
+import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.config.TritonCassandraClusterConfiguration;
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.server.TritonCleaner;
-import com.amebame.triton.service.cassandra.entity.TritonColumnFamily;
+import com.amebame.triton.server.util.BytesUtil;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
+import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.SerializerPackage;
+import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.ColumnFamilyQuery;
+import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.UnknownComparatorException;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.netflix.astyanax.util.ByteBufferRangeImpl;
 
 /**
  * Client for cassandra clusters
@@ -37,21 +62,24 @@ public class TritonCassandraClient implements TritonCleaner {
 	
 	private static final Logger log = LogManager.getLogger(TritonCassandraClient.class);
 	
-	private ConcurrentMap<String, AstyanaxContext<Cluster>> clustermap;
+	private ConcurrentMap<String, ClusterHolder> clustermap;
 	
-	private ConcurrentMap<String, AstyanaxContext<Keyspace>> keyspacemap;
+	private ConcurrentMap<String, KeyspaceHolder> keyspacemap;
 	
-	private ConcurrentMap<String, TritonColumnFamily> cfmap;
+	private ConcurrentMap<String, ColumnFamily<?, ?>> cfmap;
 	
 	private TritonCassandraConfiguration config;
 	
 	private Lock lock;
-
+	
+	private static final Integer DEFAULT_LIMIT_ROWS = 100;
+	private static final Integer DEFAULT_LIMIT_COLUMNS = 1000;
+	
 	@Inject
 	public TritonCassandraClient(TritonCassandraConfiguration config) {
-		this.clustermap = new ConcurrentHashMap<String, AstyanaxContext<Cluster>>();
-		this.keyspacemap = new ConcurrentHashMap<String, AstyanaxContext<Keyspace>>();
-		this.cfmap = new ConcurrentHashMap<String, TritonColumnFamily>();
+		this.clustermap = new ConcurrentHashMap<>();
+		this.keyspacemap = new ConcurrentHashMap<>();
+		this.cfmap = new ConcurrentHashMap<>();
 		this.lock = new ReentrantLock();
 		this.config = config;
 		log.info("initialized triton cassandra client");
@@ -68,15 +96,31 @@ public class TritonCassandraClient implements TritonCleaner {
 	}
 	
 	/**
+	 * Get the cluster by name
+	 * @param clusterName
+	 * @return
+	 */
+	public Cluster getCluster(String clusterName) {
+		return getClusterHolder(clusterName).getCluster();
+	}
+	
+	/**
+	 * Get the partitioner by name
+	 * @param clusterName
+	 * @return
+	 */
+	public IPartitioner<? extends Token<?>> getPartitioner(String clusterName) {
+		return getClusterHolder(clusterName).getPartitioner();
+	}
+	
+	/**
 	 * Get keyspace list
 	 * @param cluster
 	 * @return
 	 */
 	public List<KeyspaceDefinition> getKeyspaceDefinitions(String clusterName) {
-		AstyanaxContext<Cluster> context = getClusterContext(clusterName);
 		try {
-			Cluster cluster = context.getEntity();
-			return cluster.describeKeyspaces();
+			return getCluster(clusterName).describeKeyspaces();
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(e);
 		}
@@ -89,9 +133,8 @@ public class TritonCassandraClient implements TritonCleaner {
 	 * @return
 	 */
 	public KeyspaceDefinition getKeyspaceDefinition(String clusterName, String keyspaceName) {
-		AstyanaxContext<Keyspace> context = getKeyspaceContext(clusterName, keyspaceName);
 		try {
-			return context.getEntity().describeKeyspace();
+			return getKeyspace(clusterName, keyspaceName).describeKeyspace();
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(e);
 		}
@@ -104,9 +147,8 @@ public class TritonCassandraClient implements TritonCleaner {
 	 * @return
 	 */
 	public List<TokenRange> getTokenRange(String clusterName, String keyspaceName) {
-		AstyanaxContext<Keyspace> context = getKeyspaceContext(clusterName, keyspaceName);
 		try {
-			return context.getEntity().describeRing();
+			return getKeyspace(clusterName, keyspaceName).describeRing();
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(e);
 		}
@@ -123,80 +165,94 @@ public class TritonCassandraClient implements TritonCleaner {
 	}
 	
 	/**
-	 * Get cluster context
-	 * @param clusterName
-	 * @return
-	 */
-	private AstyanaxContext<Cluster> getClusterContext(String clusterName) {
-		AstyanaxContext<Cluster> context = clustermap.get(clusterName);
-		if (context == null) {
-			lock.lock();
-			try {
-				context = clustermap.get(clusterName);
-				if (context == null) {
-					log.info("creating cassandra cluter context for {}", clusterName);
-					TritonCassandraClusterConfiguration clusterConfig = getClusterConfig(clusterName);
-					// build the astyanax context
-					context = new AstyanaxContext.Builder()
-					.forCluster(clusterName)
-					.withAstyanaxConfiguration(clusterConfig.getAstyanaxConfig())
-					.withConnectionPoolConfiguration(
-							new ConnectionPoolConfigurationImpl(clusterName+"-pool").setMaxConnsPerHost(1)
-					)
-					.buildCluster(ThriftFamilyFactory.getInstance());
-					context.start();
-					clustermap.put(clusterName, context);
-				}
-			} finally {
-				lock.unlock();
-			}
-		}
-		return context;
-	}
-	
-	/**
 	 * Get keyspace context
 	 * @param clusterName
 	 * @param keyspaceName
 	 * @return
 	 */
-	private AstyanaxContext<Keyspace> getKeyspaceContext(String clusterName, String keyspaceName) {
-		String key = getKey(clusterName, keyspaceName);
-		AstyanaxContext<Keyspace> context = keyspacemap.get(key);
-		if (context == null) {
+	public AstyanaxContext<Keyspace> getKeyspaceContext(String clusterName, String keyspaceName) {
+		return getKeyspaceHolder(clusterName, keyspaceName).getContext();
+	}
+	
+	/**
+	 * Get cluster holder
+	 * @param clusterName
+	 * @return
+	 */
+	private ClusterHolder getClusterHolder(String clusterName) {
+		ClusterHolder holder = clustermap.get(clusterName);
+		if (holder == null) {
 			lock.lock();
 			try {
-				context = keyspacemap.get(key);
-				if (context == null) {
-					log.info("creating keyspace context for {} in {}", keyspaceName, clusterName);
+				holder = clustermap.get(clusterName);
+				if (holder == null) {
+					log.info("creating cassandra cluter context for {}", clusterName);
 					TritonCassandraClusterConfiguration clusterConfig = getClusterConfig(clusterName);
 					// build the astyanax context
-					context = new AstyanaxContext.Builder()
-					.forCluster(clusterName)
-					.forKeyspace(keyspaceName)
+					AstyanaxContext<Cluster> context = new AstyanaxContext.Builder()
+					.forCluster(clusterConfig.getName())
 					.withAstyanaxConfiguration(clusterConfig.getAstyanaxConfig())
-					.withConnectionPoolConfiguration(clusterConfig.getPoolConfig())
-					.buildKeyspace(ThriftFamilyFactory.getInstance());
+					.withConnectionPoolConfiguration(
+							new ConnectionPoolConfigurationImpl(clusterName+"-pool")
+							.setMaxConnsPerHost(1)
+							.setSeeds(clusterConfig.getPoolConfig().getSeeds())
+					)
+					.buildCluster(ThriftFamilyFactory.getInstance());
 					context.start();
-					keyspacemap.put(key, context);
+					holder = new ClusterHolder(context);
+					clustermap.put(clusterName, holder);
 				}
 			} finally {
 				lock.unlock();
 			}
 		}
-		return context;
+		return holder;
 	}
 	
 	/**
-	 * Get {@link TritonColumnFamily}. It will update keyspace definition if not exists.
+	 * Get keyspace holder
+	 * @param clusterName
+	 * @param keyspaceName
+	 * @return
+	 */
+	private KeyspaceHolder getKeyspaceHolder(String clusterName, String keyspaceName) {
+		String key = getKey(clusterName, keyspaceName);
+		KeyspaceHolder holder = keyspacemap.get(key);
+		if (holder == null) {
+			lock.lock();
+			try {
+				holder = keyspacemap.get(key);
+				if (holder == null) {
+					log.info("creating keyspace context for {} in {}", keyspaceName, clusterName);
+					TritonCassandraClusterConfiguration clusterConfig = getClusterConfig(clusterName);
+					// build the astyanax context
+					AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
+					.forCluster(clusterConfig.getName())
+					.forKeyspace(keyspaceName)
+					.withAstyanaxConfiguration(clusterConfig.getAstyanaxConfig())
+					.withConnectionPoolConfiguration(clusterConfig.getPoolConfig())
+					.buildKeyspace(ThriftFamilyFactory.getInstance());
+					context.start();
+					holder = new KeyspaceHolder(context);
+					keyspacemap.put(key, holder);
+				}
+			} finally {
+				lock.unlock();
+			}
+		}
+		return holder;
+	}
+	
+	/**
+	 * Get {@link ColumnFamilyInfo}. It will update keyspace definition if not exists.
 	 * @param clusterName
 	 * @param keyspaceName
 	 * @param columnFamilyName
 	 * @return
 	 */
-	public TritonColumnFamily getColumnFamily(String clusterName, String keyspaceName, String columnFamilyName) {
+	public ColumnFamily<?, ?> getColumnFamily(String clusterName, String keyspaceName, String columnFamilyName) {
 		String key = getKey(clusterName, keyspaceName, columnFamilyName);
-		TritonColumnFamily cf = cfmap.get(key);
+		ColumnFamily<?, ?> cf = cfmap.get(key);
 		if (cf == null) {
 			updateKeyspaceDefinition(clusterName, keyspaceName);
 			cf = cfmap.get(key);
@@ -220,8 +276,9 @@ public class TritonCassandraClient implements TritonCleaner {
 				ColumnFamily<?, ?> cf = new ColumnFamily<>(
 						cfdef.getName(),
 						sp.getKeySerializer(),
-						sp.getColumnNameSerializer());
-				cfmap.put(key, new TritonColumnFamily(cfdef, cf, sp));
+						sp.getColumnNameSerializer(),
+						sp.getDefaultValueSerializer());
+				cfmap.put(key, cf);
 			}
 		} catch (ConnectionException | UnknownComparatorException e) {
 			throw new TritonCassandraException(e);
@@ -274,15 +331,400 @@ public class TritonCassandraClient implements TritonCleaner {
 	}
 	
 	/**
+	 * Get columns by {@link GetColumns} parameter.
+	 */
+	@SuppressWarnings("unchecked")
+	public <K,C> Object getColumns(GetColumns gets) {
+		
+		Keyspace keyspace = getKeyspace(gets.getCluster(), gets.getKeyspace());
+		ColumnFamily<K, C> cf = (ColumnFamily<K, C>) getColumnFamily(
+				gets.getCluster(),
+				gets.getKeyspace(),
+				gets.getColumnFamily()
+		);
+		Serializer<K> keySerializer = cf.getKeySerializer();
+		Serializer<C> columnSerializer = cf.getColumnSerializer();
+		Serializer<?> valueSerializer = cf.getDefaultValueSerializer();
+		
+		try {
+			ColumnFamilyQuery<K, C> query = keyspace.prepareQuery(cf);
+			if (gets.getConsitency() != null) {
+				query.setConsistencyLevel(CassandraConverter.consistency(gets.getConsitency()));
+			}
+			if (gets.isSingleKey()) {
+				// Single key query
+				K key = CassandraConverter.toObject(gets.getKeys().asText(), keySerializer);
+				RowQuery<K, C> row = query.getKey(key);
+				Map<String, JsonNode> map;
+				List<CassandraColumn<C>> list;
+				if (gets.hasColumns()) {
+					JsonNode columns = gets.getColumns();
+					if (gets.hasColumnRange()) {
+						// set range query
+						ByteBufferRange range = createRange(columns, columnSerializer);
+						row.withColumnRange(range);
+					} else {
+						// set columns
+						List<C> slice = CassandraConverter.toObjectList(gets.getColumns(), columnSerializer);
+						row.withColumnSlice(slice);
+					}
+				}
+				// get column list
+				ColumnList<C> columns = row.execute().getResult();
+				if (gets.hasColumnNames()) {
+					map = new HashMap<>(columns.size());
+					for (Column<C> column : columns) {
+						// add to map
+						String keyText = columnSerializer.getString(column.getRawName());
+						JsonNode valueNode = CassandraConverter.toValueNode(
+								column.getByteArrayValue(),
+								valueSerializer);
+						map.put(keyText, valueNode);
+					}
+					return map;
+				} else {
+					list = new ArrayList<>(columns.size());
+					for (Column<C> column : columns) {
+						// add to list
+						JsonNode valueNode = CassandraConverter.toValueNode(
+								column.getByteArrayValue(),
+								valueSerializer);
+						list.add(new CassandraColumn<C>(
+								column.getName(),
+								valueNode
+								));
+					}
+					return list;
+				}
+				
+			} else {
+				
+				// multiple key or range key query
+				
+				RowSliceQuery<K, C> slice = null;
+				if (gets.hasKeyArray()) {
+					// Multiple key query
+					List<K> keys = CassandraConverter.toObjectList(
+							gets.getKeys(),
+							cf.getKeySerializer());
+					slice = query.getKeySlice(keys);
+				} else if (gets.hasKeyRange()) {
+					// Range key query
+					// get the partitioner to calculate tokens
+					IPartitioner<? extends Token<?>> partitioner = getPartitioner(gets.getCluster());
+					// resolve token ranges
+					String startToken = null;
+					String endToken = null;
+					// get keys node
+					JsonNode keys = gets.getKeys();
+					// start token
+					startToken = getRangeToken(keys.get("start"), keySerializer, partitioner, true);
+					endToken = getRangeToken(keys.get("end"), keySerializer, partitioner, false);
+					// limit default 100
+					int limit = DEFAULT_LIMIT_ROWS;
+					if (keys.has("limit")) {
+						limit = keys.get("limit").asInt();
+					}
+					// token range query
+					slice = query
+							.getRowRange(null, null, startToken, endToken, limit)
+							;
+				} else {
+					slice = query
+							.getRowRange(null, null, null, null, DEFAULT_LIMIT_ROWS);
+				}
+				if (gets.hasColumns()) {
+					JsonNode columns = gets.getColumns();
+					if (gets.hasColumnRange()) {
+						// set range query
+						ByteBufferRange range = createRange(columns, columnSerializer);
+						slice.withColumnRange(range);
+					} else {
+						// set columns
+						List<C> list = CassandraConverter.toObjectList(gets.getColumns(), columnSerializer);
+						slice.withColumnSlice(list);
+					}
+				}
+				// get slice rows
+				Rows<K,C> rows = slice.execute().getResult();
+				Map<String, Map<String, JsonNode>> mapmap;
+				Map<String, List<CassandraColumn<C>>> maplist;
+				if (gets.hasColumnNames()) {
+					mapmap = new HashMap<>(rows.size());
+					for (Row<K, C> row : rows) {
+						String rowKey = keySerializer.getString(row.getRawKey());
+						ColumnList<C> columns = row.getColumns();
+						Map<String, JsonNode> map = new HashMap<>(columns.size());
+						for (Column<C> column : columns) {
+							map.put(
+									CassandraConverter.toString(column.getName(), columnSerializer),
+									CassandraConverter.toValueNode(column.getByteArrayValue(), valueSerializer)
+									);
+						}
+						mapmap.put(rowKey, map);
+					}
+					return mapmap;
+				} else {
+					maplist = new HashMap<>(rows.size());
+					for (Row<K, C> row : rows) {
+						String rowKey = CassandraConverter.toString(row.getKey(), keySerializer);
+						ColumnList<C> columns = row.getColumns();
+						List<CassandraColumn<C>> list = new ArrayList<>();
+						for (Column<C> column : columns) {
+							list.add(new CassandraColumn<>(
+									column.getName(),
+									CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer)
+									));
+						}
+						maplist.put(rowKey, list);
+					}
+					return maplist;
+				}
+			}
+		} catch (ConnectionException e) {
+			throw new TritonCassandraException(e);
+		}
+	}
+	
+	/**
+	 * Create {@link ByteBufferRange} from {@link GetColumns} query.
+	 * @param gets
+	 * @param columnSerializer
+	 * @return
+	 */
+	private ByteBufferRange createRange(JsonNode node, Serializer<?> columnSerializer) {
+		
+		ByteBuffer start = null;
+		ByteBuffer end = null;
+		Boolean reversed = Boolean.FALSE;
+		Integer limit = DEFAULT_LIMIT_COLUMNS;
+		
+		if (node.has("start")) {
+			// set start of the range
+			start = getRangeBuffer(node.get("start"), columnSerializer, true);
+		}
+		if (node.has("end")) {
+			end = getRangeBuffer(node.get("end"), columnSerializer, false);
+		}
+		if (node.has("reversed")) {
+			// mark reversed
+			reversed = node.get("reversed").asBoolean();
+			// swap start/end
+			ByteBuffer temp = start;
+			start = end;
+			end = temp;
+		}
+		if (node.has("limit")) {
+			// set limit size of columns of single row
+			limit = node.get("limit").asInt();
+		}
+		return new ByteBufferRangeImpl(start, end, limit, reversed);
+	}
+	
+	/**
+	 * Get buffer for start of the range.
+	 * @param endpoint
+	 * @param serializer
+	 * @return
+	 */
+	private <C> ByteBuffer getRangeBuffer(JsonNode endpoint, Serializer<C> serializer, boolean start) {
+		if (endpoint.isObject()) {
+			JsonNode value = endpoint.get("value");
+			ByteBuffer point = serializer.fromString(value.asText());
+			if (endpoint.has("exclusive") && endpoint.get("exclusive").asBoolean()) {
+				if (start) {
+					// get next binary
+					point = serializer.getNext(point);
+				} else {
+					// get previous binary
+					point = BytesUtil.previous(point);
+				}
+			}
+			return point;
+		} else {
+			return serializer.fromString(endpoint.asText());
+		}
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private <C> String getRangeToken(
+			JsonNode endpoint,
+			Serializer<C> serializer,
+			IPartitioner<? extends Token<?>> partitioner,
+			boolean start) {
+		
+		TokenFactory factory = partitioner.getTokenFactory();
+		
+		if (endpoint == null) {
+			if (start) {
+				// return minimum token if this is the start token
+				return factory.toString(partitioner.getMinimumToken());
+			} else {
+				// return null if maximum token required
+				return null;
+			}
+		} else if (endpoint.isObject()) {
+			JsonNode value = endpoint.get("value");
+			ByteBuffer point = serializer.fromString(value.asText());
+			// get token string
+			Token<?> token = partitioner.getToken(point);
+			// get next/previous token if exlusive required
+			if (endpoint.has("exclusive") && endpoint.get("exclusive").asBoolean()) {
+				if (start) {
+					return getNextToken(token);
+				} else {
+					return getPreviousToken(token);
+				}
+			}
+			return token.toString();
+		} else {
+			// resolve range from a single text value
+			String key = endpoint.asText();
+			ByteBuffer buffer = serializer.fromString(key);
+			return factory.toString(factory.fromByteArray(buffer));
+		}
+	}
+	
+	/**
+	 * Get next token
+	 * @param object
+	 */
+	private <T> String getNextToken(Token<T> token) {
+		T object = token.token;
+		Class<?> objectClass = object.getClass();
+		if (objectClass == BigInteger.class) {
+			return ((BigInteger) object).add(BigInteger.ONE).toString();
+		} else if (objectClass == Long.class) {
+			return String.valueOf(((Long) object).longValue() + 1L);
+		} else if (objectClass == byte[].class) {
+			return Hex.bytesToHex(BytesUtil.next((byte[]) object));
+		} else {
+			throw new TritonCassandraException("Unsupported token type " + object.getClass().getSimpleName());
+		}
+	}
+	/**
+	 * Get previosu token
+	 * @param object
+	 */
+	private <T> String getPreviousToken(Token<T> token) {
+		T object = token.token;
+		Class<?> objectClass = object.getClass();
+		if (objectClass == BigInteger.class) {
+			return ((BigInteger) object).subtract(BigInteger.ONE).toString();
+		} else if (objectClass == Long.class) {
+			return String.valueOf(((Long) object).longValue() - 1L);
+		} else if (objectClass == byte[].class) {
+			return Hex.bytesToHex(BytesUtil.previous((byte[]) object));
+		} else {
+			throw new TritonCassandraException("Unsupported token type " + object.getClass().getSimpleName());
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <K,C> void setColumns(SetColumns sets) {
+		
+		// get keyspace
+		Keyspace keyspace = getKeyspace(sets.getCluster(), sets.getKeyspace());
+		// get column family
+		ColumnFamily<K, C> cf = (ColumnFamily<K, C>) getColumnFamily(
+				sets.getCluster(),
+				sets.getKeyspace(),
+				sets.getColumnFamily()
+		);
+		Integer ttl = sets.getTtl();
+		// mutate
+		MutationBatch batch = keyspace.prepareMutationBatch();
+		// set consistency level if specified
+		if (sets.getConsistency() != null) {
+			batch.withConsistencyLevel(CassandraConverter.consistency(sets.getConsistency()));
+		}
+		for (Entry<String, Map<String, JsonNode>> row : sets.getRows().entrySet()) {
+			String rowKey = row.getKey();
+			// prepare column mutation
+			ColumnListMutation<C> clm = batch.withRow(cf, CassandraConverter.toObject(rowKey, cf.getKeySerializer()));
+			for (Entry<String, JsonNode> entry : row.getValue().entrySet()) {
+				String columnKey = entry.getKey();
+				// convert string key to type
+				C key = CassandraConverter.toObject(columnKey, cf.getColumnSerializer());
+				// get buffer from serializer
+				ByteBuffer value = CassandraConverter.toValueBuffer(entry.getValue(), cf.getDefaultValueSerializer());
+				if (ttl == null) {
+					// set column value
+					clm.putColumn(key, value);
+				} else {
+					// set column with time to live
+					clm.putColumn(key, value, ttl);
+				}
+			}
+		}
+		try {
+			OperationResult<Void> result = batch.execute();
+			result.getResult();
+		} catch (ConnectionException e) {
+			throw new TritonCassandraException(e);
+		}
+		
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <K,C> void removeColumns(RemoveColumns remove) {
+		
+		// get keyspace
+		Keyspace keyspace = getKeyspace(remove.getCluster(), remove.getKeyspace());
+		// get column family
+		ColumnFamily<K,C> cf = (ColumnFamily<K, C>) getColumnFamily(
+				remove.getCluster(),
+				remove.getKeyspace(),
+				remove.getColumnFamily());
+		
+		// prepare batch for deletion
+		MutationBatch batch = keyspace.prepareMutationBatch();
+		if (remove.getConsistency() != null) {
+			// set consistency level if specified
+			batch.withConsistencyLevel(
+					CassandraConverter.consistency(remove.getConsistency())
+			);
+		}
+		
+		// iterate rows
+		for (Entry<String, List<String>> row : remove.getRows().entrySet()) {
+			String rowKey = row.getKey();
+			// prepare row mutation
+			ColumnListMutation<C> clm = batch.withRow(
+					cf,
+					CassandraConverter.toObject(rowKey, cf.getKeySerializer())
+			);
+			// get value list
+			List<String> values = row.getValue();
+			if (values == null || values.size() == 0) {
+				// remove whole row if column are not specified
+				clm.delete();
+			} else {
+				// remove all columns
+				for (String column : values) {
+					clm.deleteColumn(
+							CassandraConverter.toObject(column, cf.getColumnSerializer())
+					);
+				}
+			}
+		}
+		try {
+			batch.execute();
+		} catch (ConnectionException e) {
+			throw new TritonCassandraException(e);
+		}
+	}
+	
+	/**
 	 * Close all resources for cassandra
 	 */
 	public void close() {
 		log.info("shutting down cassandra contexts");
-		for (AstyanaxContext<Cluster> context : clustermap.values()) {
-			context.shutdown();
+		for (ClusterHolder holder : clustermap.values()) {
+			holder.shutdown();
 		}
-		for (AstyanaxContext<Keyspace> context : keyspacemap.values()) {
-			context.shutdown();
+		for (KeyspaceHolder holder : keyspacemap.values()) {
+			holder.shutdown();
 		}
 	}
 	

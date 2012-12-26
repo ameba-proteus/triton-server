@@ -2,43 +2,43 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.amebame.proteus</groupId>
+	<groupId>com.amebame.triton</groupId>
 	<artifactId>triton-server</artifactId>
 	<version>0.1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>triton</name>
+	<name>triton-server</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<netty.version>3.6.0.Final</netty.version>
-		<junit.version>4.11</junit.version>
-		<jackson.version>2.1.2</jackson.version>
-		<log4j.version>2.0-beta3</log4j.version>
-		<jcommander.version>1.30</jcommander.version>
+		<client.version>0.1.0-SNAPSHOT</client.version>
 		<guice.version>3.0</guice.version>
+		<log4j.version>2.0-beta3</log4j.version>
+		<slf4j.version>1.7.2</slf4j.version>
+		<jcommander.version>1.30</jcommander.version>
 		<concurrentlinkedhashmap.version>1.3.1</concurrentlinkedhashmap.version>
 		<astyanax.version>1.56.18</astyanax.version>
+		<cassandra.version>1.2.0-rc2</cassandra.version>
 		<xmemcached.version>1.3.8</xmemcached.version>
 		<guava.version>13.0.1</guava.version>
-
+		<junit.version>4.11</junit.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<dependencies>
+	
+		<!-- Triton Client -->
+		<dependency>
+			<groupId>com.amebame.triton</groupId>
+			<artifactId>triton-client</artifactId>
+			<version>${client.version}</version>
+		</dependency>
 
 		<!-- Google Guice -->
 		<dependency>
 			<groupId>com.google.inject</groupId>
 			<artifactId>guice</artifactId>
 			<version>${guice.version}</version>
-		</dependency>
-
-		<!-- Netty -->
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty</artifactId>
-			<version>${netty.version}</version>
 		</dependency>
 
 		<!-- Google Guava -->
@@ -59,16 +59,35 @@
 					<artifactId>org.apache.servicemix.bundles.commons-csv</artifactId>
 				</exclusion>
 				<exclusion>
+					<groupId>org.apache.cassandra</groupId>
+					<artifactId>cassandra-all</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.cassandra</groupId>
+					<artifactId>cassandra-thrift</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.thrift</groupId>
+					<artifactId>libthrift</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jettison</groupId>
+					<artifactId>jettison</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.cassandra</groupId>
+			<artifactId>cassandra-all</artifactId>
+			<version>${cassandra.version}</version>
+			<exclusions>
+				<exclusion>
 					<groupId>org.apache.httpcomponents</groupId>
 					<artifactId>httpclient</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>javax.servlet</groupId>
 					<artifactId>servlet-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.codehaus.jettison</groupId>
-					<artifactId>jettison</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>org.xerial.snappy</groupId>
@@ -140,13 +159,6 @@
 			<version>${xmemcached.version}</version>
 		</dependency>
 
-		<!-- Jackson -->
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>${jackson.version}</version>
-		</dependency>
-
 		<!-- Concurrent Linked HashMap -->
 		<dependency>
 			<groupId>com.googlecode.concurrentlinkedhashmap</groupId>
@@ -169,6 +181,11 @@
 			<groupId>org.apache.logging.log4j.adapters</groupId>
 			<artifactId>log4j12-api</artifactId>
 			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
 		</dependency>
 		
 		<!-- Command Line -->

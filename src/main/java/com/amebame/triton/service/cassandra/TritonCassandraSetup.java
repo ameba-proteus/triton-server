@@ -6,6 +6,7 @@ import javax.inject.Singleton;
 import com.amebame.triton.server.TritonServerCleaner;
 import com.amebame.triton.server.TritonServerContext;
 import com.amebame.triton.service.cassandra.method.TritonCassandraClusterMethods;
+import com.amebame.triton.service.cassandra.method.TritonCassandraColumnFamilyMethods;
 import com.amebame.triton.service.cassandra.method.TritonCassandraKeyspaceMethods;
 
 @Singleton
@@ -20,6 +21,8 @@ public class TritonCassandraSetup {
 	@Inject private TritonCassandraClusterMethods clusterMethods;
 	
 	@Inject private TritonCassandraKeyspaceMethods keyspaceMethods;
+	
+	@Inject private TritonCassandraColumnFamilyMethods columnFamilyMethods;
 
 	public TritonCassandraSetup() {
 	}
@@ -29,6 +32,7 @@ public class TritonCassandraSetup {
 		cleaner.add(client);
 		context.addServerMethod(clusterMethods);
 		context.addServerMethod(keyspaceMethods);
+		context.addServerMethod(columnFamilyMethods);
 	}
 
 }

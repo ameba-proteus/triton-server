@@ -10,7 +10,8 @@ import org.junit.Test;
 
 import com.amebame.triton.client.TritonClient;
 import com.amebame.triton.entity.TritonFuture;
-import com.amebame.triton.exception.TritonConnectException;
+import com.amebame.triton.exception.TritonClientConnectException;
+import com.amebame.triton.exception.TritonClientException;
 import com.amebame.triton.protocol.TritonMessage;
 import com.amebame.triton.server.TritonServer;
 
@@ -21,56 +22,52 @@ public class TritonClientTest {
 	
 	public TritonClientTest() {
 		server = new TritonServer();
-		server.start();
+		client = new TritonClient();
 	}
 	
 	@Before
-	public void start() {
-		client = new TritonClient();
+	public void start() throws TritonClientConnectException {
+		server.start();
+		client.open("127.0.0.1",4848);
+		assertTrue(client.isOpen());
 	}
 	
 	@After
 	public void after() {
+		if (client.isOpen()) {
+			client.close();
+		}
 		if (server != null) {
 			server.stop();
 		}
 	}
 
 	@Test
-	public void testOpenClose() throws TritonConnectException {
-		client.open("127.0.0.1", 4848);
+	public void testOpenClose() throws TritonClientConnectException {
 		assertTrue(client.isOpen());
 		client.close();
 		assertFalse(client.isOpen());
 	}
 	
-	@Test
-	public void testSend() throws TritonConnectException {
-		client.open("127.0.0.1", 4848);
-		TritonFuture future = client.send("test", "string value");
-		TritonMessage result = future.getResult(1000);
-		assertTrue(result.isError());
-		client.close();
+	@Test(expected=TritonClientException.class)
+	public void testSend() throws TritonClientException {
+		client.send("test", "string value");
 	}
 	
 	@Test
-	public void testHeartbeat() throws TritonConnectException {
-		client.open("127.0.0.1", 4848);
-		TritonFuture future = client.send("triton.heartbeat");
+	public void testHeartbeat() throws TritonClientException {
+		TritonFuture future = client.sendAsync("triton.heartbeat");
 		TritonMessage result = future.getResult(1000);
 		assertTrue(result.isReply());
 		assertFalse(result.isError());
-		client.close();
 	}
 	
 	@Test
-	public void testEcho() throws TritonConnectException {
-		client.open("127.0.0.1", 4848);
-		TritonFuture future = client.send("triton.echo", "echo value");
+	public void testEcho() throws TritonClientException {
+		TritonFuture future = client.sendAsync("triton.echo", "echo value");
 		TritonMessage result = future.getResult(1000);
 		assertTrue(result.isReply());
 		assertFalse(result.isError());
 		assertEquals("echo value", result.getBody(String.class));
-		client.close();
 	}
 }

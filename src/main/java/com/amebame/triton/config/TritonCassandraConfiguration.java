@@ -25,14 +25,29 @@ public class TritonCassandraConfiguration {
 		return this;
 	}
 	
+	/**
+	 * Get cluster configurations
+	 * @return
+	 */
 	public Map<String, TritonCassandraClusterConfiguration> getClusters() {
 		return clusters;
 	}
 	
+	/**
+	 * Get cluster configuration 
+	 * @param clusterName
+	 * @return
+	 */
 	public TritonCassandraClusterConfiguration getCluster(String clusterName) {
 		return clusters.get(clusterName);
 	}
 	
+	/**
+	 * Set cluster configuration
+	 * @param clusterName
+	 * @param config
+	 * @return
+	 */
 	public TritonCassandraConfiguration setCluster(String clusterName, TritonCassandraClusterConfiguration config) {
 		this.clusters.put(clusterName, config);
 		return this;

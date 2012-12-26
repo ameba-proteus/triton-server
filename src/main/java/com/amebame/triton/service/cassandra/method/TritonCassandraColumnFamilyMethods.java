@@ -6,18 +6,22 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
+import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
+import com.amebame.triton.client.cassandra.method.DropColumnFamily;
+import com.amebame.triton.client.cassandra.method.GetColumns;
+import com.amebame.triton.client.cassandra.method.ListColumnFamily;
+import com.amebame.triton.client.cassandra.method.RemoveColumns;
+import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.server.TritonMethod;
+import com.amebame.triton.service.cassandra.CassandraConverter;
 import com.amebame.triton.service.cassandra.Serializers;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
 import com.amebame.triton.service.cassandra.TritonCassandraException;
-import com.amebame.triton.service.cassandra.entity.CreateColumnFamily;
-import com.amebame.triton.service.cassandra.entity.DropColumnFamily;
-import com.amebame.triton.service.cassandra.entity.ListColumnFamily;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 import com.netflix.astyanax.model.ColumnFamily;
 
@@ -45,11 +49,11 @@ public class TritonCassandraColumnFamilyMethods {
 		Serializer<?> columnSerializer = Serializers.get(create.getComparator());
 		
 		ColumnFamily cf = new ColumnFamily(create.getColumnFamily(), keySerializer, columnSerializer);
-		Map<String, Object> options = new HashMap<String, Object>();
 		
+		Map<String, Object> options = new HashMap<String, Object>();
+	
 		try {
-			OperationResult<SchemaChangeResult> result =
-					keyspace.createColumnFamily(cf, options);
+			OperationResult<SchemaChangeResult> result = keyspace.createColumnFamily(cf, options);
 			return result != null;
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(e);
@@ -65,8 +69,7 @@ public class TritonCassandraColumnFamilyMethods {
 	public boolean dropColumnFamily(DropColumnFamily drop) {
 		Keyspace keyspace = client.getKeyspace(drop.getCluster(), drop.getKeyspace());
 		try {
-			OperationResult<SchemaChangeResult> result =
-					keyspace.dropColumnFamily(drop.getColumnFamily());
+			OperationResult<SchemaChangeResult> result = keyspace.dropColumnFamily(drop.getColumnFamily());
 			return result != null;
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(e);
@@ -78,12 +81,31 @@ public class TritonCassandraColumnFamilyMethods {
 	 * @return
 	 */
 	@TritonMethod("cassandra.columnfamily.list")
-	public List<ColumnFamilyDefinition> listColumnFamily(ListColumnFamily list) {
+	public List<TritonCassandraColumnFamily> listColumnFamily(ListColumnFamily list) {
 		Keyspace keyspace = client.getKeyspace(list.getCluster(), list.getKeyspace());
 		try {
-			return keyspace.describeKeyspace().getColumnFamilyList();
+			return CassandraConverter.toColumnFamilyList(
+					keyspace.describeKeyspace().getColumnFamilyList()
+			);
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(e);
 		}
+	}
+	
+	@TritonMethod("cassandra.columnfamily.set")
+	public boolean setColumns(SetColumns sets) {
+		client.setColumns(sets);
+		return true;
+	}
+	
+	@TritonMethod("cassandra.columnfamily.get")
+	public void getColumns(GetColumns gets) {
+		client.getColumns(gets);
+	}
+	
+	@TritonMethod("cassandra.columnfamily.remove")
+	public boolean removeColumns(RemoveColumns removes) {
+		client.removeColumns(removes);
+		return true;
 	}
 }

@@ -6,17 +6,18 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
+import com.amebame.triton.client.cassandra.method.CreateKeyspace;
+import com.amebame.triton.client.cassandra.method.DescribeKeyspace;
+import com.amebame.triton.client.cassandra.method.DropKeyspace;
+import com.amebame.triton.client.cassandra.method.ListKeyspace;
 import com.amebame.triton.server.TritonMethod;
+import com.amebame.triton.service.cassandra.CassandraConverter;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
 import com.amebame.triton.service.cassandra.TritonCassandraException;
-import com.amebame.triton.service.cassandra.entity.CreateKeyspace;
-import com.amebame.triton.service.cassandra.entity.DescribeKeyspace;
-import com.amebame.triton.service.cassandra.entity.DropKeyspace;
-import com.amebame.triton.service.cassandra.entity.ListKeyspace;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.ddl.SchemaChangeResult;
 
 public class TritonCassandraKeyspaceMethods {
@@ -29,13 +30,19 @@ public class TritonCassandraKeyspaceMethods {
 	}
 	
 	@TritonMethod("cassandra.keyspace.list")
-	public List<KeyspaceDefinition> listKeyspaces(ListKeyspace data) {
-		return client.getKeyspaceDefinitions(data.getCluster());
+	public List<TritonCassandraKeyspace> listKeyspaces(ListKeyspace data) {
+		return CassandraConverter.toKeyspaceList(
+				client.getKeyspaceDefinitions(
+						data.getCluster()),
+						true);
 	}
 	
 	@TritonMethod("cassandra.keyspace.detail")
-	public KeyspaceDefinition describeKeyspace(DescribeKeyspace describe) {
-		return client.getKeyspaceDefinition(describe.getCluster(), describe.getKeyspace());
+	public TritonCassandraKeyspace describeKeyspace(DescribeKeyspace describe) {
+		return CassandraConverter.toKeyspace(
+				client.getKeyspaceDefinition(
+						describe.getCluster(),
+						describe.getKeyspace()));
 	}
 	
 	@TritonMethod("cassandra.keyspace.create")

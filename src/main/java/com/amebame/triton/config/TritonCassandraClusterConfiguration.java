@@ -12,6 +12,8 @@ import com.netflix.astyanax.model.ConsistencyLevel;
  */
 public class TritonCassandraClusterConfiguration {
 	
+	private String name;
+	
 	private AstyanaxConfigurationImpl astyanaxConfig;
 	
 	private ConnectionPoolConfigurationImpl poolConfig;
@@ -30,6 +32,18 @@ public class TritonCassandraClusterConfiguration {
 	
 	public ConnectionPoolConfigurationImpl getPoolConfig() {
 		return poolConfig;
+	}
+	
+	/**
+	 * Cluster name
+	 * @return
+	 */
+	public String getName() {
+		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
 	}
 	
 	/**
