@@ -9,10 +9,7 @@ import javax.inject.Inject;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
 import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
 import com.amebame.triton.client.cassandra.method.DropColumnFamily;
-import com.amebame.triton.client.cassandra.method.GetColumns;
 import com.amebame.triton.client.cassandra.method.ListColumnFamily;
-import com.amebame.triton.client.cassandra.method.RemoveColumns;
-import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.server.TritonMethod;
 import com.amebame.triton.service.cassandra.CassandraConverter;
 import com.amebame.triton.service.cassandra.Serializers;
@@ -92,20 +89,4 @@ public class TritonCassandraColumnFamilyMethods {
 		}
 	}
 	
-	@TritonMethod("cassandra.columnfamily.set")
-	public boolean setColumns(SetColumns sets) {
-		client.setColumns(sets);
-		return true;
-	}
-	
-	@TritonMethod("cassandra.columnfamily.get")
-	public void getColumns(GetColumns gets) {
-		client.getColumns(gets);
-	}
-	
-	@TritonMethod("cassandra.columnfamily.remove")
-	public boolean removeColumns(RemoveColumns removes) {
-		client.removeColumns(removes);
-		return true;
-	}
 }
