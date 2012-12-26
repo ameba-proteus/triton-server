@@ -100,8 +100,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	{
 	  "cluster": "Test Cluster",
 	  "keyspace": "keyspace",
-	  "columns": {
-	    "key": {
+	  "column_family": "family",
+	  "rows": {
+	    "rowkey": {
 	      "column1": "TEST VALUE",
 	      "column2": 100,
 	      "column3": {
@@ -163,3 +164,7 @@ not yet
 ## MongoDB
 
 not yet
+
+# License
+
+BSD
