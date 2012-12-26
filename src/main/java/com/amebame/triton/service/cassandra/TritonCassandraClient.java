@@ -74,6 +74,7 @@ public class TritonCassandraClient implements TritonCleaner {
 	
 	private static final Integer DEFAULT_LIMIT_ROWS = 100;
 	private static final Integer DEFAULT_LIMIT_COLUMNS = 1000;
+	private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 	
 	@Inject
 	public TritonCassandraClient(TritonCassandraConfiguration config) {
@@ -371,18 +372,16 @@ public class TritonCassandraClient implements TritonCleaner {
 				}
 				// get column list
 				ColumnList<C> columns = row.execute().getResult();
-				if (gets.hasColumnNames()) {
-					map = new HashMap<>(columns.size());
-					for (Column<C> column : columns) {
-						// add to map
-						String keyText = columnSerializer.getString(column.getRawName());
-						JsonNode valueNode = CassandraConverter.toValueNode(
-								column.getByteArrayValue(),
-								valueSerializer);
-						map.put(keyText, valueNode);
+				if (gets.hasSingleColumn()) {
+					Column<C> column = columns.getColumnByIndex(0);
+					if (column == null) {
+						return null;
 					}
-					return map;
-				} else {
+					return CassandraConverter.toValueNode(
+							column.getByteArrayValue(),
+							valueSerializer
+					);
+				} else if (gets.hasColumnRange()) {
 					list = new ArrayList<>(columns.size());
 					for (Column<C> column : columns) {
 						// add to list
@@ -395,6 +394,20 @@ public class TritonCassandraClient implements TritonCleaner {
 								));
 					}
 					return list;
+				} else {
+					if (columns.size() == 0) {
+						return null;
+					}
+					map = new HashMap<>(columns.size());
+					for (Column<C> column : columns) {
+						// add to map
+						String keyText = columnSerializer.getString(column.getRawName());
+						JsonNode valueNode = CassandraConverter.toValueNode(
+								column.getByteArrayValue(),
+								valueSerializer);
+						map.put(keyText, valueNode);
+					}
+					return map;
 				}
 				
 			} else {
@@ -449,36 +462,39 @@ public class TritonCassandraClient implements TritonCleaner {
 				Rows<K,C> rows = slice.execute().getResult();
 				Map<String, Map<String, JsonNode>> mapmap;
 				Map<String, List<CassandraColumn<C>>> maplist;
-				if (gets.hasColumnNames()) {
-					mapmap = new HashMap<>(rows.size());
-					for (Row<K, C> row : rows) {
-						String rowKey = keySerializer.getString(row.getRawKey());
-						ColumnList<C> columns = row.getColumns();
-						Map<String, JsonNode> map = new HashMap<>(columns.size());
-						for (Column<C> column : columns) {
-							map.put(
-									CassandraConverter.toString(column.getName(), columnSerializer),
-									CassandraConverter.toValueNode(column.getByteArrayValue(), valueSerializer)
-									);
-						}
-						mapmap.put(rowKey, map);
-					}
-					return mapmap;
-				} else {
+				if (gets.hasColumnRange()) {
 					maplist = new HashMap<>(rows.size());
 					for (Row<K, C> row : rows) {
 						String rowKey = CassandraConverter.toString(row.getKey(), keySerializer);
 						ColumnList<C> columns = row.getColumns();
-						List<CassandraColumn<C>> list = new ArrayList<>();
-						for (Column<C> column : columns) {
-							list.add(new CassandraColumn<>(
-									column.getName(),
-									CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer)
-									));
+						if (columns.size() > 0) {
+							List<CassandraColumn<C>> list = new ArrayList<>();
+							for (Column<C> column : columns) {
+								list.add(new CassandraColumn<>(
+										column.getName(),
+										CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer)));
+							}
+							maplist.put(rowKey, list);
 						}
-						maplist.put(rowKey, list);
 					}
 					return maplist;
+				} else {
+					mapmap = new HashMap<>(rows.size());
+					for (Row<K, C> row : rows) {
+						String rowKey = keySerializer.getString(row.getRawKey());
+						ColumnList<C> columns = row.getColumns();
+						if (columns.size() > 0) {
+							Map<String, JsonNode> map = new HashMap<>(columns.size());
+							for (Column<C> column : columns) {
+								map.put(
+										CassandraConverter.toString(column.getName(), columnSerializer),
+										CassandraConverter.toValueNode(column.getByteArrayValue(), valueSerializer)
+										);
+							}
+							mapmap.put(rowKey, map);
+						}
+					}
+					return mapmap;
 				}
 			}
 		} catch (ConnectionException e) {
@@ -502,9 +518,13 @@ public class TritonCassandraClient implements TritonCleaner {
 		if (node.has("start")) {
 			// set start of the range
 			start = getRangeBuffer(node.get("start"), columnSerializer, true);
+		} else {
+			start = EMPTY_BUFFER;
 		}
 		if (node.has("end")) {
 			end = getRangeBuffer(node.get("end"), columnSerializer, false);
+		} else {
+			end = EMPTY_BUFFER;
 		}
 		if (node.has("reversed")) {
 			// mark reversed
@@ -640,9 +660,10 @@ public class TritonCassandraClient implements TritonCleaner {
 		}
 		for (Entry<String, Map<String, JsonNode>> row : sets.getRows().entrySet()) {
 			String rowKey = row.getKey();
+			Map<String, JsonNode> columns = row.getValue();
 			// prepare column mutation
 			ColumnListMutation<C> clm = batch.withRow(cf, CassandraConverter.toObject(rowKey, cf.getKeySerializer()));
-			for (Entry<String, JsonNode> entry : row.getValue().entrySet()) {
+			for (Entry<String, JsonNode> entry : columns.entrySet()) {
 				String columnKey = entry.getKey();
 				// convert string key to type
 				C key = CassandraConverter.toObject(columnKey, cf.getColumnSerializer());

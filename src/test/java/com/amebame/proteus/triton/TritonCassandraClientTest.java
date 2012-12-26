@@ -1,10 +1,13 @@
 package com.amebame.proteus.triton;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.After;
@@ -17,14 +20,17 @@ import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
 import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
 import com.amebame.triton.client.cassandra.method.CreateKeyspace;
 import com.amebame.triton.client.cassandra.method.DropKeyspace;
+import com.amebame.triton.client.cassandra.method.GetColumns;
 import com.amebame.triton.client.cassandra.method.ListColumnFamily;
 import com.amebame.triton.client.cassandra.method.ListKeyspace;
+import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.exception.TritonClientConnectException;
 import com.amebame.triton.exception.TritonClientException;
 import com.amebame.triton.exception.TritonException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.server.TritonServer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class TritonCassandraClientTest {
 	
@@ -119,6 +125,130 @@ public class TritonCassandraClientTest {
 			}
 		}
 		assertTrue(hasTestFamily);
+	}
+	
+	@Test
+	public void testSetGet() throws TritonException {
+		
+		String familyName = "test_getset";
+		
+		// creating test family
+		CreateColumnFamily create = new CreateColumnFamily();
+		create.setCluster(clusterName);
+		create.setKeyspace(keyspaceName);
+		create.setColumnFamily(familyName);
+		create.setKeyValidationClass("UTF8Type");
+		create.setComparator("UTF8Type");
+		create.setDefaultValidationClass("UTF8Type");
+		JsonNode result = client.send(create);
+		assertTrue(result.asBoolean());
+		
+		// set data
+		SetColumns set = new SetColumns();
+		set.setCluster(clusterName);
+		set.setKeyspace(keyspaceName);
+		set.setColumnFamily(familyName);
+		
+		// rows
+		Map<String, Map<String, JsonNode>> rows = new HashMap<>();
+		Map<String, JsonNode> columns = new HashMap<>();
+		columns.put("column1", Json.text("value1"));
+		columns.put("column2", Json.text("value2"));
+		columns.put("column3", Json.object().put("name1", "valuechild").put("name2", 1000));
+		columns.put("column4", Json.number(100));
+		rows.put("row1", columns);
+		set.setRows(rows);
+		
+		assertTrue(client.send(set).asBoolean());
+		
+		// get row
+		GetColumns get = new GetColumns();
+		get.setCluster(clusterName);
+		get.setKeyspace(keyspaceName);
+		get.setColumnFamily(familyName);
+		// single key
+		get.setKey(Json.text("row1"));
+		// single column
+		get.setColumns(Json.text("column1"));
+		
+		// get column
+		result = client.send(get);
+		assertNotNull(result);
+		assertEquals("value1", result.asText());
+		
+		// multiple column
+		get.setColumns(Json.array().add("column1").add("column3").add("column4"));
+		result = client.send(get);
+		assertEquals(3, result.size());
+		assertEquals("value1", result.get("column1").asText());
+		assertEquals(2, result.get("column3").size());
+		assertEquals("valuechild", result.get("column3").get("name1").asText());
+		assertEquals(1000, result.get("column3").get("name2").asInt());
+		assertEquals(100, result.get("column4").asInt());
+		assertFalse(result.has("value2"));
+		
+		// range column
+		JsonNode start = Json.text("column3");
+		ObjectNode range = Json.object();
+		range.put("start", start);
+		get.setColumns(range);
+		result = client.send(get);
+		assertEquals(2, result.size());
+		assertEquals("column3", result.get(0).get("column").asText());
+		assertEquals("valuechild", result.get(0).get("value").get("name1").asText());
+		assertEquals(1000, result.get(0).get("value").get("name2").asInt());
+		assertEquals("column4", result.get(1).get("column").asText());
+		assertEquals(100, result.get(1).get("value").asInt());
+		
+		// all columns
+		get.setColumns(null);
+		result = client.send(get);
+		assertEquals(4, result.size());
+		assertEquals("value1", result.get("column1").asText());
+		assertEquals("value2", result.get("column2").asText());
+		assertEquals("valuechild", result.get("column3").get("name1").asText());
+		assertEquals(1000, result.get("column3").get("name2").asInt());
+		assertEquals(100, result.get("column4").asInt());
+		
+		// TODO reverse order
+		
+		// TODO exclusive range
+		
+		// put multiple rows
+		rows.clear();
+		Map<String, JsonNode> columns2 = new HashMap<>();
+		columns2.put("column1", Json.text("value1"));
+		columns2.put("column2", Json.text("value2"));
+		columns2.put("column3", Json.text("value3"));
+		
+		Map<String, JsonNode> columns3 = new HashMap<>();
+		columns3.put("column1", Json.text("value1"));
+		columns3.put("column3", Json.text("value3"));
+		columns3.put("column4", Json.text("value4"));
+		
+		rows.put("row2", columns2);
+		rows.put("row3", columns3);
+		
+		assertTrue(client.send(set).asBoolean());
+		
+		// set key range
+		get.setKeys(Json.array().add("row2").add("row3").add("row4"));
+		
+		result = client.send(get);
+		assertEquals(2, result.size());
+		assertTrue(result.has("row2"));
+		assertTrue(result.has("row3"));
+		assertEquals(3, result.get("row2").size());
+		assertEquals("value1", result.get("row2").get("column1").asText());
+		assertEquals("value2", result.get("row2").get("column2").asText());
+		assertEquals("value3", result.get("row2").get("column3").asText());
+		assertEquals(3, result.get("row3").size());
+		assertEquals("value1", result.get("row3").get("column1").asText());
+		assertEquals("value3", result.get("row3").get("column3").asText());
+		assertEquals("value4", result.get("row3").get("column4").asText());
+		
+		// set column range
+		
 	}
 	
 	private static final void log(Object ... args) {

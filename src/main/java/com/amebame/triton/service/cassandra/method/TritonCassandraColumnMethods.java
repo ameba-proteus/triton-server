@@ -24,8 +24,8 @@ public class TritonCassandraColumnMethods {
 	}
 	
 	@TritonMethod("cassandra.column.get")
-	public void getColumns(GetColumns gets) {
-		client.getColumns(gets);
+	public Object getColumns(GetColumns gets) {
+		return client.getColumns(gets);
 	}
 	
 	@TritonMethod("cassandra.column.remove")
