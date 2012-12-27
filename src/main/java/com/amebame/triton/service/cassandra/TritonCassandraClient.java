@@ -575,6 +575,8 @@ public class TritonCassandraClient implements TritonCleaner {
 			IPartitioner<? extends Token<?>> partitioner,
 			boolean start) {
 		
+		// start token is default exclusive.
+		// should get previous token if exclusive is not specified
 		TokenFactory factory = partitioner.getTokenFactory();
 		
 		if (endpoint == null) {
@@ -592,13 +594,25 @@ public class TritonCassandraClient implements TritonCleaner {
 			Token<?> token = partitioner.getToken(point);
 			// get next/previous token if exlusive required
 			if (endpoint.has("exclusive") && endpoint.get("exclusive").asBoolean()) {
+				// get exclusive token
 				if (start) {
-					return getNextToken(token);
+					// start token is default to exclusive.
+					return partitioner.getTokenFactory().toString(token);
 				} else {
+					// should get previous token
 					return getPreviousToken(token);
 				}
+			} else {
+				// get inclusive token
+				if (start) {
+					// start token is exlusive default
+					// should get previous value to get inclusive value
+					return getPreviousToken(token);
+				} else {
+					// end token is default to inclusive
+					return partitioner.getTokenFactory().toString(token);
+				}
 			}
-			return token.toString();
 		} else {
 			// resolve range from a single text value
 			String key = endpoint.asText();
@@ -611,6 +625,7 @@ public class TritonCassandraClient implements TritonCleaner {
 	 * Get next token
 	 * @param object
 	 */
+	/*
 	private <T> String getNextToken(Token<T> token) {
 		T object = token.token;
 		Class<?> objectClass = object.getClass();
@@ -624,6 +639,8 @@ public class TritonCassandraClient implements TritonCleaner {
 			throw new TritonCassandraException("Unsupported token type " + object.getClass().getSimpleName());
 		}
 	}
+	*/
+	
 	/**
 	 * Get previosu token
 	 * @param object
