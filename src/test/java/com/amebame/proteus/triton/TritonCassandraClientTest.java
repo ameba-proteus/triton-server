@@ -5,6 +5,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,7 @@ import com.amebame.triton.client.cassandra.method.DropKeyspace;
 import com.amebame.triton.client.cassandra.method.GetColumns;
 import com.amebame.triton.client.cassandra.method.ListColumnFamily;
 import com.amebame.triton.client.cassandra.method.ListKeyspace;
+import com.amebame.triton.client.cassandra.method.RemoveColumns;
 import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.exception.TritonClientConnectException;
 import com.amebame.triton.exception.TritonClientException;
@@ -249,6 +252,103 @@ public class TritonCassandraClientTest {
 		
 		// set column range
 		
+	}
+	
+	@Test
+	public void testRemove() throws TritonException {
+		
+		String familyName = "test_remove";
+		
+		// creating test family
+		CreateColumnFamily create = new CreateColumnFamily();
+		create.setCluster(clusterName);
+		create.setKeyspace(keyspaceName);
+		create.setColumnFamily(familyName);
+		create.setKeyValidationClass("UTF8Type");
+		create.setComparator("UTF8Type");
+		create.setDefaultValidationClass("UTF8Type");
+		assertTrue(client.send(create, Boolean.class));
+		
+		// rows
+		SetColumns set = new SetColumns();
+		Map<String, Map<String, JsonNode>> rows = new HashMap<>();
+		Map<String, JsonNode> columns = new HashMap<>();
+		set.setCluster(clusterName);
+		set.setKeyspace(keyspaceName);
+		set.setColumnFamily(familyName);
+		columns.put("column1", Json.text("value11"));
+		columns.put("column2", Json.text("value12"));
+		columns.put("column3", Json.text("value13"));
+		rows.put("row1", columns);
+		columns = new HashMap<>();
+		columns.put("column1", Json.text("value21"));
+		columns.put("column2", Json.text("value22"));
+		columns.put("column3", Json.text("value23"));
+		rows.put("row2", columns);
+		columns = new HashMap<>();
+		columns.put("column1", Json.text("lalue31"));
+		columns.put("column2", Json.text("value32"));
+		columns.put("column3", Json.text("value33"));
+		rows.put("row3", columns);
+		set.setRows(rows);
+		assertTrue(client.send(set, Boolean.class));
+		
+		GetColumns get = new GetColumns();
+		get.setCluster(clusterName);
+		get.setKeyspace(keyspaceName);
+		get.setColumnFamily(familyName);
+		JsonNode result = client.send(get);
+		assertEquals(3, result.size());
+		assertEquals("value11", result.get("row1").get("column1").asText());
+		assertEquals("value12", result.get("row1").get("column2").asText());
+		assertEquals("value13", result.get("row1").get("column3").asText());
+		assertEquals(3, result.get("row2").size());
+		assertEquals(3, result.get("row3").size());
+		
+		RemoveColumns remove = new RemoveColumns();
+		remove.setCluster(clusterName);
+		remove.setKeyspace(keyspaceName);
+		remove.setColumnFamily(familyName);
+		Map<String, List<String>> removes = new HashMap<>();
+		// only single row with columns
+		removes.put("row1", Arrays.asList("column1", "column2"));
+		remove.setRows(removes);
+		assertTrue(client.send(remove, Boolean.class));
+		
+		result = client.send(get);
+		assertEquals(3, result.size());
+		assertEquals(1, result.get("row1").size());
+		assertFalse(result.get("row1").has("column1"));
+		assertFalse(result.get("row1").has("column2"));
+		assertTrue(result.get("row1").has("column3"));
+		assertEquals(3, result.get("row2").size());
+		assertEquals(3, result.get("row3").size());
+		
+		removes.clear();
+		// remove entire row
+		removes.put("row2", new ArrayList<String>());
+		assertTrue(client.send(remove, Boolean.class));
+		
+		result = client.send(get);
+		assertEquals(2, result.size());
+		assertFalse(result.has("row2"));
+		assertTrue(result.has("row1"));
+		assertTrue(result.has("row3"));
+		
+		// remove multiple row columns
+		removes.clear();
+		removes.put("row1", Arrays.asList("column3"));
+		removes.put("row3", Arrays.asList("column2","column3"));
+		assertTrue(client.send(remove, Boolean.class));
+		
+		result = client.send(get);
+		assertEquals(1, result.size());
+		assertFalse(result.has("row1"));
+		assertTrue(result.has("row3"));
+		assertEquals(1, result.get("row3").size());
+		assertTrue(result.get("row3").has("column1"));
+		
+		log(result);
 	}
 	
 	private static final void log(Object ... args) {
