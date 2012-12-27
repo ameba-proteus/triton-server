@@ -133,7 +133,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	true
 ---
 #### get columns
+
 get columns with multiple names
+
 	cassandra.column.get
 	{
 	  "cluster": "cluster",
@@ -150,7 +152,9 @@ get columns with multiple names
 	  "column2": {"name1":"value1","name2":"value2"}
 	}
 ---
+
 get columns with range
+
 	cassandra.column.get
 	{
 	  "cluster": "cluster",
