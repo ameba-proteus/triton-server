@@ -2,6 +2,7 @@ package com.amebame.triton.server;
 
 import javax.inject.Inject;
 
+import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -11,6 +12,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 import com.amebame.triton.entity.TritonError;
+import com.amebame.triton.exception.TritonException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.protocol.TritonMessage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,15 +57,7 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 			
 		} catch (Exception e) {
 			// get root cause
-			Throwable ex = e;
-			// prevent infinite loop to set maximum depth
-			int max = 10;
-			while (max-- > 0) {
-				if (ex.getCause() == null || ex.getCause() == ex) {
-					break;
-				}
-				ex = ex.getCause();
-			}
+			Throwable ex = TritonException.getRootCause(e);
 			// if failed to parse
 			log.warn("method execution failed", ex);
 			// return client as error
@@ -92,7 +86,12 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 	 */
 	private void sendError(int callId, Channel channel, Throwable e) {
 		if (callId > 0) {
-			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(e));
+			String text = e.getMessage();
+			// swap error message if received cassandra exception
+			if (e.getClass() == InvalidRequestException.class) {
+				text = ((InvalidRequestException) e).getWhy();
+			}
+			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(text));
 			channel.write(message);
 		}
 	}
