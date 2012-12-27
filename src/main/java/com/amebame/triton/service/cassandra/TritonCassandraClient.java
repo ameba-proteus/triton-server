@@ -443,8 +443,17 @@ public class TritonCassandraClient implements TritonCleaner {
 							.getRowRange(null, null, startToken, endToken, limit)
 							;
 				} else {
-					slice = query
-							.getRowRange(null, null, null, null, DEFAULT_LIMIT_ROWS);
+					IPartitioner<? extends Token<?>> partitioner = getPartitioner(gets.getCluster());
+					ByteBuffer startBuffer = partitioner.getTokenFactory().toByteArray(partitioner.getMinimumToken());
+					ByteBuffer endBuffer = BytesUtil.previous(startBuffer);
+					Token<?> startToekn = partitioner.getTokenFactory().fromByteArray(startBuffer);
+					Token<?> endToken = partitioner.getTokenFactory().fromByteArray(endBuffer);
+					slice = query.getRowRange(
+							null,
+							null,
+							partitioner.getTokenFactory().toString(startToekn),
+							partitioner.getTokenFactory().toString(endToken),
+							DEFAULT_LIMIT_ROWS);
 				}
 				if (gets.hasColumns()) {
 					JsonNode columns = gets.getColumns();
