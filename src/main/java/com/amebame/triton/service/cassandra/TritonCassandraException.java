@@ -23,7 +23,7 @@ public class TritonCassandraException extends TritonRuntimeException {
 	}
 
 	public TritonCassandraException(Throwable cause) {
-		super(cause);
+		super(cause.getMessage(), cause);
 	}
 
 }
