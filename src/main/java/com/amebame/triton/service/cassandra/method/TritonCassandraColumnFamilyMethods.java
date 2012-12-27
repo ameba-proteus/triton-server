@@ -44,8 +44,9 @@ public class TritonCassandraColumnFamilyMethods {
 		
 		Serializer<?> keySerializer = Serializers.get(create.getKeyValidationClass());
 		Serializer<?> columnSerializer = Serializers.get(create.getComparator());
+		Serializer<?> valueSerializer = Serializers.get(create.getDefaultValidationClass());
 		
-		ColumnFamily cf = new ColumnFamily(create.getColumnFamily(), keySerializer, columnSerializer);
+		ColumnFamily cf = new ColumnFamily(create.getColumnFamily(), keySerializer, columnSerializer, valueSerializer);
 		
 		Map<String, Object> options = new HashMap<String, Object>();
 	

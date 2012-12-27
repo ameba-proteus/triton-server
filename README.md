@@ -23,7 +23,7 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 #### create keyspace
 	cassandra.keyspace.create
 	{
-  	  "cluster": "Test Clsuter",
+  	  "cluster": "clsuter",
   	  "keyspace": "keyspace",
 	  "placement_strategy": "org.apache.casandra.locator.SimpleStrategy",
 	  "strategy_options": {
@@ -31,50 +31,50 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  }
 	}
 
----
+↓
 	true
-
+---
 #### drop keyspace
 	cassandra.keyspace.drop
 	{
-	  "cluster": "Test Cluster",
+	  "cluster": "cluster",
 	  "keyspace": "keyspace"
 	}
----
+↓
 	true
-
+---
 #### list clusters
 	cassandra.cluster.list
 	{}
----
+↓
 	[{
-	  "name": "Test Cluster"
+	  "name": "cluster"
 	}]
-
+---
 #### list keyspaces
 	cassandra.keyspace.list
 	{
-	  "cluster": "Test Cluster"
+	  "cluster": "cluster"
 	}
----
+↓
 	{
 	}
-
+---
 #### create column family
 	cassandra.columnfamily.create
 	{
-	  "cluster": "Test Cluster",
+	  "cluster": "cluster",
 	  "keyspace": "keyspace",
 	  "columnfamily": "family",
 	  "
 	}
----
+↓
 	true
-
+---
 #### drop column family
 	cassandra.columnfamily.drop
 	{
-	  "cluster": "Test Cluster",
+	  "cluster": "cluster",
 	  "keyspace": "keyspace",
 	  "columnfamily": "family",
 	  "comparator": "UTF8Type",
@@ -82,23 +82,23 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "key_validation_class": "UTF8Type",
 	  "read_repair_chance": 0.1
 	}
----
+↓
 	true
-
+---
 #### list column families
 	cassandra.columnfamily.list
 	{
-	  "cluster": "Test Cluster",
+	  "cluster": "clluster",
 	  "keyspce": "keyspace"
 	}
----
+↓
 	{
 	}
-
+---
 #### save columns
 	cassandra.column.set
 	{
-	  "cluster": "Test Cluster",
+	  "cluster": "cluster",
 	  "keyspace": "keyspace",
 	  "column_family": "family",
 	  "rows": {
@@ -112,22 +112,42 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  },
 	  "consistency": "quorum"
 	}
----
+↓
 	true
-
+---
 #### get columns
+get columns with multiple names
 	cassandra.column.get
 	{
-	  "cluster": "Test Cluster",
+	  "cluster": "cluster",
 	  "keyspace": "keyspace",
 	  "keys": ["key1","key2"],
 	  "columns": ["column1", "column2"],
 	  "consistency": "one"
 	}
----
+↓
 	{
+	  "column1": "value1",
+	  "column2": {"name1":"value1","name2":"value2"}
+	}
+---
+get columns with range
+	cassandra.column.get
+	{
+	  "cluster": "cluster",
+	  "keyspace": "keyspace",
+	  "keys": "key1",
+	  "columns": {"start":"column3", "end":"column5"},
+	  "consistency": "one"
 	}
 
+↓
+	[
+	  {"column":"column3", "value": "value3"},
+	  {"column":"column4", "value": "value3"},
+	  {"column":"column5", "value": "value3"}
+	]
+---
 #### remove columns
 	cassandra.columns.remove
 	{
@@ -136,9 +156,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "keys": ["key1", "key2"],
 	  "columns": ["column1","column2","column3"]
 	}
----
+↓
 	true
-
+---
 ## HBase
 
 create table
