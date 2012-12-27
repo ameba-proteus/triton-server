@@ -70,4 +70,11 @@ public class TritonClientTest {
 		assertFalse(result.isError());
 		assertEquals("echo value", result.getBody(String.class));
 	}
+	
+	@Test
+	public void  testClose() throws TritonClientException, InterruptedException {
+		client.sendAsyncFully("triton.close", null);
+		Thread.sleep(100L);
+		assertFalse(client.isOpen());
+	}
 }

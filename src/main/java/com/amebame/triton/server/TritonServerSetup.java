@@ -3,7 +3,7 @@ package com.amebame.triton.server;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.amebame.triton.service.TritonHeartbeat;
+import com.amebame.triton.service.TritonManagementMethods;
 
 @Singleton
 public class TritonServerSetup {
@@ -11,7 +11,7 @@ public class TritonServerSetup {
 	@Inject
 	public TritonServerSetup(
 			TritonServerContext context,
-			TritonHeartbeat heartbeat) {
+			TritonManagementMethods heartbeat) {
 		context.addServerMethod(heartbeat);
 	}
 

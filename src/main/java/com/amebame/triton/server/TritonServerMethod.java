@@ -17,7 +17,7 @@ public class TritonServerMethod {
 	private Method method;
 	
 	private Class<?>[] parameterTypes;
-
+	
 	public TritonServerMethod(Object object, Method method) {
 		this.object = object;
 		this.method = method;
