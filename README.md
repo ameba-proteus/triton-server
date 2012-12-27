@@ -32,7 +32,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	}
 
 ↓
+
 	true
+
 ---
 #### drop keyspace
 	cassandra.keyspace.drop
@@ -40,13 +42,18 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "cluster": "cluster",
 	  "keyspace": "keyspace"
 	}
+
 ↓
+
 	true
+
 ---
 #### list clusters
 	cassandra.cluster.list
 	{}
+
 ↓
+
 	[{
 	  "name": "cluster"
 	}]
@@ -56,7 +63,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	{
 	  "cluster": "cluster"
 	}
+
 ↓
+
 	{
 	}
 ---
@@ -68,7 +77,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "columnfamily": "family",
 	  "
 	}
+
 ↓
+
 	true
 ---
 #### drop column family
@@ -82,7 +93,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "key_validation_class": "UTF8Type",
 	  "read_repair_chance": 0.1
 	}
+
 ↓
+
 	true
 ---
 #### list column families
@@ -91,7 +104,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  "cluster": "clluster",
 	  "keyspce": "keyspace"
 	}
+
 ↓
+
 	{
 	}
 ---
@@ -112,7 +127,9 @@ Client only need simple TCP socket which uses JSON to communicate with triton.
 	  },
 	  "consistency": "quorum"
 	}
+
 ↓
+
 	true
 ---
 #### get columns
@@ -125,7 +142,9 @@ get columns with multiple names
 	  "columns": ["column1", "column2"],
 	  "consistency": "one"
 	}
+
 ↓
+
 	{
 	  "column1": "value1",
 	  "column2": {"name1":"value1","name2":"value2"}
@@ -142,6 +161,7 @@ get columns with range
 	}
 
 ↓
+
 	[
 	  {"column":"column3", "value": "value3"},
 	  {"column":"column4", "value": "value3"},
@@ -156,7 +176,9 @@ get columns with range
 	  "keys": ["key1", "key2"],
 	  "columns": ["column1","column2","column3"]
 	}
+
 ↓
+
 	true
 ---
 ## HBase
