@@ -3,14 +3,9 @@ package com.amebame.proteus.triton;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.After;
@@ -18,22 +13,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.amebame.triton.client.TritonClient;
-import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
-import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
-import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
-import com.amebame.triton.client.cassandra.method.CreateKeyspace;
-import com.amebame.triton.client.cassandra.method.DropKeyspace;
-import com.amebame.triton.client.cassandra.method.GetColumns;
-import com.amebame.triton.client.cassandra.method.ListColumnFamily;
-import com.amebame.triton.client.cassandra.method.ListKeyspace;
-import com.amebame.triton.client.cassandra.method.RemoveColumns;
-import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.client.memcached.method.DeleteCache;
 import com.amebame.triton.client.memcached.method.GetCache;
 import com.amebame.triton.client.memcached.method.SetCache;
 import com.amebame.triton.exception.TritonClientConnectException;
 import com.amebame.triton.exception.TritonClientException;
-import com.amebame.triton.exception.TritonException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.server.TritonServer;
 import com.fasterxml.jackson.databind.JsonNode;
