@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
@@ -32,7 +33,6 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) throws Exception {
 		Channel channel = evt.getChannel();
 		TritonMessage message = (TritonMessage) evt.getMessage();
-		log.debug("message received {} {} {}", channel.getId(), message.getCallId(), message.getLength());
 		// parse json from body
 		try {
 			JsonNode node = Json.tree(message.getBody());
@@ -107,6 +107,12 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(text));
 			channel.write(message);
 		}
+	}
+	
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+			throws Exception {
+		log.error("exception occurs while processing request", e.getCause());
 	}
 	
 	@Override
