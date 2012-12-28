@@ -1,5 +1,7 @@
 package com.amebame.triton.server;
 
+import java.util.concurrent.ExecutorService;
+
 import javax.inject.Inject;
 
 import org.apache.cassandra.thrift.InvalidRequestException;
@@ -33,35 +35,52 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) throws Exception {
 		Channel channel = evt.getChannel();
 		TritonMessage message = (TritonMessage) evt.getMessage();
-		// parse json from body
-		try {
-			JsonNode node = Json.tree(message.getBody());
-			String name = node.get("name").asText();
-			if (name == null) {
-				sendError(message.getCallId(), channel, "name should be specified in a body");
-				return;
+		ExecutorService executor = context.getWorkerExecutor();
+		executor.submit(new TritonServerWorker(message, channel));
+	}
+	
+	/**
+	 * Execution Worker
+	 */
+	private class TritonServerWorker implements Runnable {
+		private TritonMessage message;
+		private Channel channel;
+		private TritonServerWorker(TritonMessage message, Channel channel) {
+			this.message = message;
+			this.channel = channel;
+		}
+		@Override
+		public void run() {
+			// parse json from body
+			try {
+				JsonNode node = Json.tree(message.getBody());
+				String name = node.get("name").asText();
+				if (name == null) {
+					sendError(message.getCallId(), channel, "name should be specified in a body");
+					return;
+				}
+				TritonServerMethod method = context.getServerMethod(name);
+				if (method == null) {
+					sendError(message.getCallId(), channel, "method " + name + " does not exist");
+					return;
+				}
+				JsonNode body = node.get("body");
+				if (log.isTraceEnabled()) {
+					log.trace("message received {} - {}", name, body.toString());
+				}
+				// invoke reflected method
+				Object result = method.invoke(channel, message, body);
+				// send reply
+				sendReply(message.getCallId(), channel, result);
+
+			} catch (Exception e) {
+				// get root cause
+				Throwable ex = TritonException.getRootCause(e);
+				// if failed to parse
+				log.warn("method execution failed", ex);
+				// return client as error
+				sendError(message.getCallId(), channel, ex);
 			}
-			TritonServerMethod method = context.getServerMethod(name);
-			if (method == null) {
-				sendError(message.getCallId(), channel, "method " + name + " does not exist");
-				return;
-			}
-			JsonNode body = node.get("body");
-			if (log.isTraceEnabled()) {
-				log.trace("message received {} - {}", name, body.toString());
-			}
-			// invoke reflected method
-			Object result = method.invoke(channel, message, body);
-			// send reply
-			sendReply(message.getCallId(), channel, result);
-			
-		} catch (Exception e) {
-			// get root cause
-			Throwable ex = TritonException.getRootCause(e);
-			// if failed to parse
-			log.warn("method execution failed", ex);
-			// return client as error
-			sendError(message.getCallId(), channel, ex);
 		}
 	}
 	

@@ -1,14 +1,28 @@
 package com.amebame.triton.server;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import com.amebame.triton.config.TritonServerConfiguration;
+import com.amebame.triton.util.NamedThreadFactory;
 
 @Singleton
 public class TritonServerContext {
 	
 	private TritonServerMethodMap methodMap;
 	
-	public TritonServerContext() {
+	private ExecutorService executor;
+	
+	@Inject
+	public TritonServerContext(TritonServerConfiguration config) {
 		methodMap = new TritonServerMethodMap();
+		executor = Executors.newFixedThreadPool(
+				config.getNetty().getWorker(),
+				new NamedThreadFactory("triton-server-worker-")
+		);
 	}
 	
 	/**
@@ -28,4 +42,11 @@ public class TritonServerContext {
 		return methodMap.getMethod(name);
 	}
 
+	/**
+	 * Get worker executor
+	 * @return
+	 */
+	public ExecutorService getWorkerExecutor() {
+		return executor;
+	}
 }

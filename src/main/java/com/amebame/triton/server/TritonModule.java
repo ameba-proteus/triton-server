@@ -7,10 +7,9 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerBossPool;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioWorkerPool;
 import org.jboss.netty.util.ThreadNameDeterminer;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.config.TritonMemcachedConfiguration;
@@ -19,6 +18,7 @@ import com.amebame.triton.exception.TritonRuntimeException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
 import com.amebame.triton.service.cassandra.TritonCassandraSetup;
+import com.amebame.triton.service.lock.LockSetup;
 import com.amebame.triton.service.memcached.TritonMemcachedClient;
 import com.amebame.triton.service.memcached.TritonMemcachedSetup;
 import com.amebame.triton.util.NamedThreadFactory;
@@ -44,6 +44,7 @@ public class TritonModule extends AbstractModule {
 		configureNetty();
 		configureCassandra();
 		configureMemcached();
+		configureLock();
 		// configureHBase();
 		// configureRedis();
 	}
@@ -79,17 +80,27 @@ public class TritonModule extends AbstractModule {
 				return currentThreadName;
 			}
 		};
+		ThreadRenamingRunnable.setThreadNameDeterminer(determiner);
+		/*
 		NioServerBossPool bossPool = new NioServerBossPool(
-				Executors.newCachedThreadPool(new NamedThreadFactory("triton-server-core-")),
-				config.getNetty().getBoss(),
-				determiner
+				Executors.newFixedThreadPool(config.getNetty().getBoss(), new NamedThreadFactory("triton-server-core-")),
+				config.getNetty().getBoss()
 		);
 		NioWorkerPool workerPool = new NioWorkerPool(
-				Executors.newCachedThreadPool(new NamedThreadFactory("triton-server-worker-")),
-				config.getNetty().getWorker(),
-				determiner
+				Executors.newFixedThreadPool(config.getNetty().getWorker(), new NamedThreadFactory("triton-server-worker-")),
+				config.getNetty().getWorker()
 		);
 		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(bossPool, workerPool);
+		*/
+		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(
+				Executors.newFixedThreadPool(
+						config.getNetty().getBoss(),
+						new NamedThreadFactory("triton-server-boss-")),
+				Executors.newFixedThreadPool(
+						config.getNetty().getBoss(),
+						new NamedThreadFactory("triton-server-core-")),
+				config.getNetty().getWorker()
+		);
 		ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
 		bind(ChannelFactory.class).toInstance(channelFactory);
 		bind(ServerBootstrap.class).toInstance(bootstrap);
@@ -111,6 +122,10 @@ public class TritonModule extends AbstractModule {
 		bind(TritonMemcachedConfiguration.class).toInstance(config.getMemcached());
 		bind(TritonMemcachedClient.class).asEagerSingleton();
 		bind(TritonMemcachedSetup.class).asEagerSingleton();
+	}
+	
+	private void configureLock() {
+		bind(LockSetup.class).asEagerSingleton();
 	}
 
 }
