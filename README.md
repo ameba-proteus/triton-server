@@ -203,6 +203,8 @@ incr/decr
 
 flush
 
+## Zookeeper
+
 ## Redis
 
 not yet
