@@ -32,7 +32,7 @@ public class TritonServerMethodMap {
 			TritonMethod methodAnnotation = method.getAnnotation(TritonMethod.class);
 			if (methodAnnotation != null) {
 				TritonServerMethod tritonMethod = new TritonServerMethod(object, method);
-				log.info("adding server method {}.{}", object.getClass().getSimpleName(), method.getName());
+				log.info("adding server method {}", methodAnnotation.value());
 				map.put(methodAnnotation.value(), tritonMethod);
 			}
 		}
