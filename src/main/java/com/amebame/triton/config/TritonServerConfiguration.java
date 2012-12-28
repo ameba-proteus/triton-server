@@ -15,6 +15,9 @@ public class TritonServerConfiguration {
 	// Memcached
 	private TritonMemcachedConfiguration memcached;
 	
+	// Zookeeper
+	private TritonZookeeperConfiguration zookeeper;
+	
 	public TritonServerConfiguration() {
 	}
 
@@ -40,5 +43,13 @@ public class TritonServerConfiguration {
 	
 	public void setMemcached(TritonMemcachedConfiguration memcached) {
 		this.memcached = memcached;
+	}
+	
+	public TritonZookeeperConfiguration getZookeeper() {
+		return zookeeper;
+	}
+	
+	public void setZookeeper(TritonZookeeperConfiguration zookeeper) {
+		this.zookeeper = zookeeper;
 	}
 }
