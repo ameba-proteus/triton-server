@@ -12,9 +12,8 @@ public class TritonServerConfiguration {
 	// Cassandra
 	private TritonCassandraConfiguration cassandra;
 	
-	// HBase
-	
 	// Memcached
+	private TritonMemcachedConfiguration memcached;
 	
 	public TritonServerConfiguration() {
 	}
@@ -33,5 +32,13 @@ public class TritonServerConfiguration {
 	
 	public void setCassandra(TritonCassandraConfiguration cassandra) {
 		this.cassandra = cassandra;
+	}
+	
+	public TritonMemcachedConfiguration getMemcached() {
+		return memcached;
+	}
+	
+	public void setMemcached(TritonMemcachedConfiguration memcached) {
+		this.memcached = memcached;
 	}
 }

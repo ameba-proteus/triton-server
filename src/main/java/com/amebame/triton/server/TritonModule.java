@@ -13,11 +13,14 @@ import org.jboss.netty.channel.socket.nio.NioWorkerPool;
 import org.jboss.netty.util.ThreadNameDeterminer;
 
 import com.amebame.triton.config.TritonCassandraConfiguration;
+import com.amebame.triton.config.TritonMemcachedConfiguration;
 import com.amebame.triton.config.TritonServerConfiguration;
 import com.amebame.triton.exception.TritonRuntimeException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
 import com.amebame.triton.service.cassandra.TritonCassandraSetup;
+import com.amebame.triton.service.memcached.TritonMemcachedClient;
+import com.amebame.triton.service.memcached.TritonMemcachedSetup;
 import com.amebame.triton.util.NamedThreadFactory;
 import com.google.inject.AbstractModule;
 
@@ -40,10 +43,9 @@ public class TritonModule extends AbstractModule {
 		configureConfig();
 		configureNetty();
 		configureCassandra();
-		// configureCassandra()
-		// configureMemcached()
-		// configureHBase()
-		// configureRedis()
+		configureMemcached();
+		// configureHBase();
+		// configureRedis();
 	}
 	
 	private void configureTriton() {
@@ -78,17 +80,15 @@ public class TritonModule extends AbstractModule {
 			}
 		};
 		NioServerBossPool bossPool = new NioServerBossPool(
-				Executors.newCachedThreadPool(new NamedThreadFactory("triton-server-boss-")),
+				Executors.newCachedThreadPool(new NamedThreadFactory("triton-server-core-")),
 				config.getNetty().getBoss(),
 				determiner
 		);
-		bind(NioServerBossPool.class).toInstance(bossPool);
 		NioWorkerPool workerPool = new NioWorkerPool(
-				Executors.newCachedThreadPool(new NamedThreadFactory("triton-server-core-")),
+				Executors.newCachedThreadPool(new NamedThreadFactory("triton-server-worker-")),
 				config.getNetty().getWorker(),
 				determiner
 		);
-		bind(NioWorkerPool.class).toInstance(workerPool);
 		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(bossPool, workerPool);
 		ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
 		bind(ChannelFactory.class).toInstance(channelFactory);
@@ -102,6 +102,15 @@ public class TritonModule extends AbstractModule {
 		bind(TritonCassandraConfiguration.class).toInstance(config.getCassandra());
 		bind(TritonCassandraClient.class).asEagerSingleton();
 		bind(TritonCassandraSetup.class).asEagerSingleton();
+	}
+	
+	private void configureMemcached() {
+		if (config.getMemcached() == null) {
+			return;
+		}
+		bind(TritonMemcachedConfiguration.class).toInstance(config.getMemcached());
+		bind(TritonMemcachedClient.class).asEagerSingleton();
+		bind(TritonMemcachedSetup.class).asEagerSingleton();
 	}
 
 }
