@@ -22,6 +22,9 @@ public class TritonServer {
 	@Parameter(names = {"-c","--config"}, description="config path")
 	private String configPath = null;
 	
+	@Parameter(names = {"-h","--help"}, description="print this help")
+	private boolean help = false;
+	
 	// Guice injector
 	private Injector injector;
 	
@@ -64,7 +67,11 @@ public class TritonServer {
 	public static void main(String[] args) {
 		
 		TritonServer server = new TritonServer();
-		new JCommander(server, args);
+		JCommander cmd = new JCommander(server, args);
+		if (server.help) {
+			cmd.usage();
+			return;
+		}
 		server.start();
 		Runtime.getRuntime().addShutdownHook(new ShutdownHook(server));
 	}
