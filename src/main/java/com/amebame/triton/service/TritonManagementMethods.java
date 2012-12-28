@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.jboss.netty.channel.Channel;
 
 import com.amebame.triton.server.TritonMethod;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * {@link TritonManagementMethods} has
@@ -27,13 +28,13 @@ public class TritonManagementMethods {
 	}
 	
 	/**
-	 * Echo method return received text to the client
+	 * Echo method return received json to the client
 	 * @param text
 	 * @return
 	 */
 	@TritonMethod("triton.echo")
-	public String echo(String text) {
-		return text;
+	public JsonNode echo(JsonNode node) {
+		return node;
 	}
 	
 	/**
