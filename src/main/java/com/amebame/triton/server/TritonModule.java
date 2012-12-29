@@ -7,7 +7,9 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerBossPool;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioWorkerPool;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 
@@ -81,26 +83,17 @@ public class TritonModule extends AbstractModule {
 			}
 		};
 		ThreadRenamingRunnable.setThreadNameDeterminer(determiner);
-		/*
+		int boss = config.getNetty().getBoss();
 		NioServerBossPool bossPool = new NioServerBossPool(
-				Executors.newFixedThreadPool(config.getNetty().getBoss(), new NamedThreadFactory("triton-server-core-")),
-				config.getNetty().getBoss()
-		);
-		NioWorkerPool workerPool = new NioWorkerPool(
-				Executors.newFixedThreadPool(config.getNetty().getWorker(), new NamedThreadFactory("triton-server-worker-")),
-				config.getNetty().getWorker()
-		);
-		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(bossPool, workerPool);
-		*/
-		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(
 				Executors.newFixedThreadPool(
-						config.getNetty().getBoss(),
-						new NamedThreadFactory("triton-server-boss-")),
+						boss, new NamedThreadFactory("triton-boss-")),
+						boss);
+		NioWorkerPool corePool = new NioWorkerPool(
 				Executors.newFixedThreadPool(
-						config.getNetty().getBoss(),
-						new NamedThreadFactory("triton-server-core-")),
-				config.getNetty().getWorker()
-		);
+						boss,
+						new NamedThreadFactory("triton-core-")),
+						boss);
+		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(bossPool, corePool);
 		ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
 		bind(ChannelFactory.class).toInstance(channelFactory);
 		bind(ServerBootstrap.class).toInstance(bootstrap);

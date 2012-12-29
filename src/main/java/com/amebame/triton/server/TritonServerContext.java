@@ -1,7 +1,9 @@
 package com.amebame.triton.server;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -19,9 +21,13 @@ public class TritonServerContext {
 	@Inject
 	public TritonServerContext(TritonServerConfiguration config) {
 		methodMap = new TritonServerMethodMap();
-		executor = Executors.newFixedThreadPool(
+		executor = new ThreadPoolExecutor(
+				1,
 				config.getNetty().getWorker(),
-				new NamedThreadFactory("triton-server-worker-")
+				60L,
+				TimeUnit.SECONDS,
+				new LinkedBlockingQueue<Runnable>(),
+				new NamedThreadFactory("triton-worker-")
 		);
 	}
 	
