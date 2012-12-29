@@ -4,6 +4,16 @@ Triton is the gateway for any kind of databases such as cassandra, HBase, memcac
 
 Client only need simple TCP socket which uses JSON to communicate with triton.
 
+Triton supports middlewares such as
+
+* Cassandra
+* Memcached
+* Distributed Lock (internal implementation)
+* MongoDB (not yet implemented)
+* Zookeeper (not yet implemented)
+* HBase (not yet implemented)
+* Redis (not yet implemented)
+
 ## Triton Framed Protocol
 
 	| ------------ | --------- | ------- |--------- |
@@ -185,11 +195,6 @@ get columns with range
 
 	true
 ---
-## HBase
-
-create table
-
-drop table
 
 ## Memcached
 
@@ -199,9 +204,40 @@ set
 
 delete
 
-incr/decr
+## Distributed Lock
 
-flush
+### acquire shared lock
+
+	lock.acquire
+	{
+	  "key": "lock-key",
+	  "timeout": 10000
+	}
+
+↓
+
+	true
+
+---
+
+### release shared lock
+
+	lock.release
+	{
+	  "key": "lock-key"
+	}
+
+↓
+
+	true
+
+---
+
+## HBase
+
+create table
+
+drop table
 
 ## Zookeeper
 
