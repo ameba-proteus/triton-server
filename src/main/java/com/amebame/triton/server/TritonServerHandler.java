@@ -54,11 +54,16 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 			// parse json from body
 			try {
 				JsonNode node = Json.tree(message.getBody());
-				String name = node.get("name").asText();
-				if (name == null) {
+				if (node == null) {
+					sendError(message.getCallId(), channel, "body cannot be empty");
+					return;
+				}
+				JsonNode nameNode = node.get("name");
+				if (nameNode == null) {
 					sendError(message.getCallId(), channel, "name should be specified in a body");
 					return;
 				}
+				String name = nameNode.asText();
 				TritonServerMethod method = context.getServerMethod(name);
 				if (method == null) {
 					sendError(message.getCallId(), channel, "method " + name + " does not exist");
