@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutorService;
 import javax.inject.Inject;
 
 import org.apache.cassandra.thrift.InvalidRequestException;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -15,7 +16,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 import com.amebame.triton.entity.TritonError;
-import com.amebame.triton.exception.TritonException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.protocol.TritonMessage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -75,7 +75,7 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 
 			} catch (Exception e) {
 				// get root cause
-				Throwable ex = TritonException.getRootCause(e);
+				Throwable ex = ExceptionUtils.getRootCause(e);
 				// if failed to parse
 				log.warn("method execution failed", ex);
 				// return client as error
