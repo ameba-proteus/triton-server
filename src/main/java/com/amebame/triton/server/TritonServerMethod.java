@@ -59,6 +59,7 @@ public class TritonServerMethod {
 		} catch (InvocationTargetException e) {
 			// throw as generic error
 			Throwable cause = ExceptionUtils.getRootCause(e);
+			cause = cause == null ? e : cause;
 			throw new TritonRuntimeException(cause);
 		} catch (IllegalAccessException | IllegalArgumentException e) {
 			// throw as error

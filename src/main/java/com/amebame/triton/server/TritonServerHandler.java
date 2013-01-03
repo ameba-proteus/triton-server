@@ -76,6 +76,7 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 			} catch (Exception e) {
 				// get root cause
 				Throwable ex = ExceptionUtils.getRootCause(e);
+				ex = ex == null ? e : ex;
 				// if failed to parse
 				log.warn("method execution failed", ex);
 				// return client as error
