@@ -27,11 +27,9 @@ import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.config.TritonCassandraClusterConfiguration;
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.exception.TritonErrors;
-import com.amebame.triton.json.Json;
 import com.amebame.triton.server.TritonCleaner;
 import com.amebame.triton.server.util.BytesUtil;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.ColumnListMutation;
@@ -604,9 +602,14 @@ public class TritonCassandraClient implements TritonCleaner {
 			return factory.toString(partitioner.getMinimumToken());
 		} else if (endpoint.isObject()) {
 			JsonNode value = endpoint.get("value");
-			ByteBuffer point = serializer.fromString(value.asText());
-			// get token string
-			Token<?> token = partitioner.getToken(point);
+			Token<?> token = null;
+			if (value == null) {
+				token = partitioner.getMinimumToken();
+			} else {
+				ByteBuffer point = serializer.fromString(value.asText());
+				// get token string
+				token = partitioner.getToken(point);
+			}
 			// get next/previous token if exlusive required
 			if (endpoint.has("exclusive") && endpoint.get("exclusive").asBoolean()) {
 				// get exclusive token
