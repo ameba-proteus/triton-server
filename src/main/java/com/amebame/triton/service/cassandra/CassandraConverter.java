@@ -8,6 +8,7 @@ import com.amebame.triton.client.cassandra.entity.TritonCassandraCluster;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
 import com.amebame.triton.client.cassandra.method.Consistency;
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.json.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -127,7 +128,9 @@ public class CassandraConverter {
 		} else if (consistency == Consistency.three) {
 			return ConsistencyLevel.CL_THREE;
 		} else {
-			throw new TritonCassandraException("invalid consistency level " + consistency.toString());
+			throw new TritonCassandraException(
+					TritonErrors.cassandra_invalid_consistency,
+					"invalid consistency level " + consistency.toString());
 		}
 	}
 	

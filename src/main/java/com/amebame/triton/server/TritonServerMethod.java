@@ -6,6 +6,8 @@ import java.lang.reflect.Method;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jboss.netty.channel.Channel;
 
+import com.amebame.triton.exception.TritonErrors;
+import com.amebame.triton.exception.TritonException;
 import com.amebame.triton.exception.TritonRuntimeException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.protocol.TritonMessage;
@@ -57,13 +59,23 @@ public class TritonServerMethod {
 			}
 			return method.invoke(object, args);
 		} catch (InvocationTargetException e) {
-			// throw as generic error
-			Throwable cause = ExceptionUtils.getRootCause(e);
+			// get cause
+			Throwable cause = e.getCause();
+			int errorCode = TritonErrors.server_error.code();
+			if (cause instanceof TritonException) {
+				// get error code if exception if TritonException
+				errorCode = ((TritonException) cause).getError().code();
+			} else if (cause instanceof TritonRuntimeException) {
+				// get error code from runtime exception
+				errorCode = ((TritonRuntimeException) cause).getError().code();
+			}
+			// get root cause
+			cause = ExceptionUtils.getRootCause(e);
 			cause = cause == null ? e : cause;
-			throw new TritonRuntimeException(cause);
+			throw new TritonRuntimeException(TritonErrors.codeOf(errorCode), cause);
 		} catch (IllegalAccessException | IllegalArgumentException e) {
 			// throw as error
-			throw new TritonRuntimeException(e.getMessage());
+			throw new TritonRuntimeException(TritonErrors.server_error, e.getMessage());
 		}
 	}
 

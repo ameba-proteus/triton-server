@@ -1,5 +1,6 @@
 package com.amebame.triton.service.cassandra;
 
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.exception.TritonRuntimeException;
 
 public class TritonCassandraException extends TritonRuntimeException {
@@ -9,21 +10,16 @@ public class TritonCassandraException extends TritonRuntimeException {
 	public TritonCassandraException() {
 	}
 
-	public TritonCassandraException(String message, Throwable cause,
-			boolean enableSuppression, boolean writableStackTrace) {
-		super(message, cause, enableSuppression, writableStackTrace);
+	public TritonCassandraException(TritonErrors error, String message, Throwable cause) {
+		super(error, message, cause);
 	}
 
-	public TritonCassandraException(String message, Throwable cause) {
-		super(message, cause);
+	public TritonCassandraException(TritonErrors error, String message) {
+		super(error, message);
 	}
 
-	public TritonCassandraException(String message) {
-		super(message);
-	}
-
-	public TritonCassandraException(Throwable cause) {
-		super(cause.getMessage(), cause);
+	public TritonCassandraException(TritonErrors error, Throwable cause) {
+		super(error, cause.getMessage(), cause);
 	}
 
 }

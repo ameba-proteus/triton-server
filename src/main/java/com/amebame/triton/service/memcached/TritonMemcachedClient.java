@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import com.amebame.triton.config.TritonMemcachedClusterConfiguration;
 import com.amebame.triton.config.TritonMemcachedConfiguration;
 import com.amebame.triton.config.TritonMemcachedLocator;
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.server.TritonCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -71,7 +72,9 @@ public class TritonMemcachedClient implements TritonCleaner {
 	public MemcachedClient getClient(String cluster) {
 		MemcachedClient client = clients.get(cluster);
 		if (client == null) {
-			throw new TritonMemcachedException("memcached cluster " + cluster + " is not configured");
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_not_cofigured,
+					"memcached cluster " + cluster + " is not configured");
 		}
 		return client;
 	}
@@ -87,8 +90,14 @@ public class TritonMemcachedClient implements TritonCleaner {
 		MemcachedClient client = getClient(cluster);
 		try {
 			client.set(key, seconds, value, transcoder);
-		} catch (MemcachedException | TimeoutException | InterruptedException e) {
-			throw new TritonMemcachedException(e);
+		} catch (MemcachedException | InterruptedException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_error,
+					e);
+		} catch (TimeoutException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_timeout,
+					e);
 		}
 	}
 	
@@ -109,8 +118,14 @@ public class TritonMemcachedClient implements TritonCleaner {
 			} else {
 				return client.getAndTouch(key, newSeconds);
 			}
-		} catch (MemcachedException | TimeoutException | InterruptedException e) {
-			throw new TritonMemcachedException(e);
+		} catch (MemcachedException | InterruptedException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_error,
+					e);
+		} catch (TimeoutException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_timeout,
+					e);
 		}
 	}
 	
@@ -124,8 +139,14 @@ public class TritonMemcachedClient implements TritonCleaner {
 		MemcachedClient client = getClient(cluster);
 		try {
 			return client.get(keys, transcoder);
-		} catch (TimeoutException | InterruptedException | MemcachedException e) {
-			throw new TritonMemcachedException(e);
+		} catch (MemcachedException | InterruptedException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_error,
+					e);
+		} catch (TimeoutException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_timeout,
+					e);
 		}
 	}
 	
@@ -138,8 +159,14 @@ public class TritonMemcachedClient implements TritonCleaner {
 		MemcachedClient client = getClient(cluster);
 		try {
 			client.delete(key);
-		} catch (TimeoutException | InterruptedException | MemcachedException e) {
-			throw new TritonMemcachedException(e);
+		} catch (MemcachedException | InterruptedException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_error,
+					e);
+		} catch (TimeoutException e) {
+			throw new TritonMemcachedException(
+					TritonErrors.memcached_timeout,
+					e);
 		}
 	}
 	

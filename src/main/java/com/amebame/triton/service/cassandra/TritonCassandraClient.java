@@ -26,6 +26,7 @@ import com.amebame.triton.client.cassandra.method.RemoveColumns;
 import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.config.TritonCassandraClusterConfiguration;
 import com.amebame.triton.config.TritonCassandraConfiguration;
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.server.TritonCleaner;
 import com.amebame.triton.server.util.BytesUtil;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -123,7 +124,7 @@ public class TritonCassandraClient implements TritonCleaner {
 		try {
 			return getCluster(clusterName).describeKeyspaces();
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	
@@ -137,7 +138,7 @@ public class TritonCassandraClient implements TritonCleaner {
 		try {
 			return getKeyspace(clusterName, keyspaceName).describeKeyspace();
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	
@@ -151,7 +152,7 @@ public class TritonCassandraClient implements TritonCleaner {
 		try {
 			return getKeyspace(clusterName, keyspaceName).describeRing();
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	
@@ -258,7 +259,9 @@ public class TritonCassandraClient implements TritonCleaner {
 			updateKeyspaceDefinition(clusterName, keyspaceName);
 			cf = cfmap.get(key);
 			if (cf == null) {
-				throw new TritonCassandraException("column family does not exists for " + columnFamilyName + " in " + keyspaceName);
+				throw new TritonCassandraException(
+						TritonErrors.cassandra_no_column_family,
+						"column family does not exists for " + columnFamilyName + " in " + keyspaceName);
 			}
 		}
 		return cf;
@@ -281,8 +284,10 @@ public class TritonCassandraClient implements TritonCleaner {
 						sp.getDefaultValueSerializer());
 				cfmap.put(key, cf);
 			}
-		} catch (ConnectionException | UnknownComparatorException e) {
-			throw new TritonCassandraException(e);
+		} catch (ConnectionException e) {
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
+		} catch (UnknownComparatorException e) {
+			throw new TritonCassandraException(TritonErrors.cassandra_invalid_comparator, e);
 		}
 	}
 	
@@ -295,7 +300,9 @@ public class TritonCassandraClient implements TritonCleaner {
 		TritonCassandraClusterConfiguration clusterConfig = config.getCluster(clusterName);
 		// return null if cluster is not defined
 		if (clusterConfig == null) {
-			throw new TritonCassandraException("cluster has not been configured for " + clusterName);
+			throw new TritonCassandraException(
+					TritonErrors.cassandra_no_cluster,
+					"cluster has not been configured for " + clusterName);
 		}
 		return clusterConfig;
 	}
@@ -500,7 +507,9 @@ public class TritonCassandraClient implements TritonCleaner {
 				}
 			}
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(
+					TritonErrors.cassandra_connection_fail,
+					e);
 		}
 	}
 	
@@ -655,7 +664,9 @@ public class TritonCassandraClient implements TritonCleaner {
 		} else if (objectClass == byte[].class) {
 			return Hex.bytesToHex(BytesUtil.previous((byte[]) object));
 		} else {
-			throw new TritonCassandraException("Unsupported token type " + object.getClass().getSimpleName());
+			throw new TritonCassandraException(
+					TritonErrors.cassandra_invalid_token_type,
+					"Unsupported token type " + object.getClass().getSimpleName());
 		}
 	}
 	
@@ -701,7 +712,7 @@ public class TritonCassandraClient implements TritonCleaner {
 			OperationResult<Void> result = batch.execute();
 			result.getResult();
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 		
 	}
@@ -751,7 +762,7 @@ public class TritonCassandraClient implements TritonCleaner {
 		try {
 			batch.execute();
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	

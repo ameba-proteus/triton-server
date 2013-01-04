@@ -16,6 +16,7 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.config.TritonMemcachedConfiguration;
 import com.amebame.triton.config.TritonServerConfiguration;
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.exception.TritonRuntimeException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
@@ -67,7 +68,7 @@ public class TritonModule extends AbstractModule {
 					config = new TritonServerConfiguration();
 				}
 			} catch (IOException e) {
-				throw new TritonRuntimeException(e.getMessage(), e);
+				throw new TritonRuntimeException(TritonErrors.server_error, e.getMessage(), e);
 			}
 		} else if (config == null) {
 			config = new TritonServerConfiguration();

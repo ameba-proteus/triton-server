@@ -16,6 +16,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 import com.amebame.triton.entity.TritonError;
+import com.amebame.triton.exception.TritonErrors;
+import com.amebame.triton.exception.TritonException;
+import com.amebame.triton.exception.TritonRuntimeException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.protocol.TritonMessage;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,18 +58,18 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 			try {
 				JsonNode node = Json.tree(message.getBody());
 				if (node == null) {
-					sendError(message.getCallId(), channel, "body cannot be empty");
+					sendError(message.getCallId(), channel, TritonErrors.body_format.code(), "body cannot be empty");
 					return;
 				}
 				JsonNode nameNode = node.get("name");
 				if (nameNode == null) {
-					sendError(message.getCallId(), channel, "name should be specified in a body");
+					sendError(message.getCallId(), channel, TritonErrors.body_format.code(), "name should be specified in a body");
 					return;
 				}
 				String name = nameNode.asText();
 				TritonServerMethod method = context.getServerMethod(name);
 				if (method == null) {
-					sendError(message.getCallId(), channel, "method " + name + " does not exist");
+					sendError(message.getCallId(), channel, TritonErrors.body_format.code(), "method " + name + " does not exist");
 					return;
 				}
 				JsonNode body = node.get("body");
@@ -79,13 +82,20 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 				sendReply(message.getCallId(), channel, result);
 
 			} catch (Exception e) {
+				// get error code
+				int errorCode = TritonErrors.server_error.code();
+				if (e instanceof TritonException) {
+					errorCode = ((TritonException) e).getError().code();
+				} else if (e instanceof TritonRuntimeException) {
+					errorCode = ((TritonRuntimeException) e).getError().code();
+				}
 				// get root cause
 				Throwable ex = ExceptionUtils.getRootCause(e);
 				ex = ex == null ? e : ex;
 				// if failed to parse
 				log.warn("method execution failed", ex);
 				// return client as error
-				sendError(message.getCallId(), channel, ex);
+				sendError(message.getCallId(), channel, errorCode, ex);
 			}
 		}
 	}
@@ -109,14 +119,14 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 	 * @param channel
 	 * @param e
 	 */
-	private void sendError(int callId, Channel channel, Throwable e) {
+	private void sendError(int callId, Channel channel, int errorCode, Throwable e) {
 		if (callId > 0) {
 			String text = e.getMessage();
 			// swap error message if received cassandra exception
 			if (e.getClass() == InvalidRequestException.class) {
 				text = ((InvalidRequestException) e).getWhy();
 			}
-			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(text));
+			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(errorCode, text));
 			channel.write(message);
 		}
 	}
@@ -127,9 +137,9 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 	 * @param channel
 	 * @param text
 	 */
-	private void sendError(int callId, Channel channel, String text) {
+	private void sendError(int callId, Channel channel, int errorCode, String text) {
 		if (callId > 0) {
-			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(text));
+			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(errorCode, text));
 			channel.write(message);
 		}
 	}

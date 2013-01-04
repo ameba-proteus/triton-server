@@ -10,6 +10,7 @@ import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
 import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
 import com.amebame.triton.client.cassandra.method.DropColumnFamily;
 import com.amebame.triton.client.cassandra.method.ListColumnFamily;
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.server.TritonMethod;
 import com.amebame.triton.service.cassandra.CassandraConverter;
 import com.amebame.triton.service.cassandra.Serializers;
@@ -54,7 +55,7 @@ public class TritonCassandraColumnFamilyMethods {
 			OperationResult<SchemaChangeResult> result = keyspace.createColumnFamily(cf, options);
 			return result != null;
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	
@@ -70,7 +71,7 @@ public class TritonCassandraColumnFamilyMethods {
 			OperationResult<SchemaChangeResult> result = keyspace.dropColumnFamily(drop.getColumnFamily());
 			return result != null;
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	
@@ -86,7 +87,7 @@ public class TritonCassandraColumnFamilyMethods {
 					keyspace.describeKeyspace().getColumnFamilyList()
 			);
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 	}
 	

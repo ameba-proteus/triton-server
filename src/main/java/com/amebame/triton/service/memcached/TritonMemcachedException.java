@@ -1,5 +1,6 @@
 package com.amebame.triton.service.memcached;
 
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.exception.TritonRuntimeException;
 
 public class TritonMemcachedException extends TritonRuntimeException {
@@ -9,21 +10,16 @@ public class TritonMemcachedException extends TritonRuntimeException {
 	public TritonMemcachedException() {
 	}
 
-	public TritonMemcachedException(String message) {
-		super(message);
+	public TritonMemcachedException(TritonErrors error, String message) {
+		super(error, message);
 	}
 
-	public TritonMemcachedException(Throwable cause) {
-		super(cause.getMessage(), cause);
+	public TritonMemcachedException(TritonErrors error, Throwable cause) {
+		super(error, cause.getMessage(), cause);
 	}
 
-	public TritonMemcachedException(String message, Throwable cause) {
-		super(message, cause);
-	}
-
-	public TritonMemcachedException(String message, Throwable cause,
-			boolean enableSuppression, boolean writableStackTrace) {
-		super(message, cause, enableSuppression, writableStackTrace);
+	public TritonMemcachedException(TritonErrors error, String message, Throwable cause) {
+		super(error, message, cause);
 	}
 
 }

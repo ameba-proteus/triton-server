@@ -3,6 +3,7 @@ package com.amebame.triton.service.cassandra;
 import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.dht.Token;
 
+import com.amebame.triton.exception.TritonErrors;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -29,7 +30,7 @@ public class ClusterHolder {
 			Cluster cluster = context.getEntity();
 			this.partitioner = IPartitioner.class.cast(Class.forName(cluster.describePartitioner()).newInstance());
 		} catch (ClassNotFoundException | ConnectionException | InstantiationException | IllegalAccessException e) {
-			throw new TritonCassandraException(e);
+			throw new TritonCassandraException(TritonErrors.cassandra_error, e);
 		}
 	}
 	

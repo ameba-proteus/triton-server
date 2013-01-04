@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.amebame.triton.exception.TritonErrors;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.serializers.AsciiSerializer;
 import com.netflix.astyanax.serializers.BigIntegerSerializer;
@@ -87,7 +88,9 @@ public class Serializers {
 		} else if (clazz == BigInteger.class) {
 			return (Serializer<T>) BigIntegerSerializer.get();
 		} else {
-			throw new TritonCassandraException("no serializer for " + clazz.getSimpleName());
+			throw new TritonCassandraException(
+					TritonErrors.cassandra_error,
+					"no serializer for " + clazz.getSimpleName());
 		}
 	}
 

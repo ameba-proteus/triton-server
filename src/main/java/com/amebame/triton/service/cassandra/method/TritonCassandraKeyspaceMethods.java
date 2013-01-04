@@ -11,6 +11,7 @@ import com.amebame.triton.client.cassandra.method.CreateKeyspace;
 import com.amebame.triton.client.cassandra.method.DescribeKeyspace;
 import com.amebame.triton.client.cassandra.method.DropKeyspace;
 import com.amebame.triton.client.cassandra.method.ListKeyspace;
+import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.server.TritonMethod;
 import com.amebame.triton.service.cassandra.CassandraConverter;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
@@ -59,7 +60,7 @@ public class TritonCassandraKeyspaceMethods {
 			OperationResult<SchemaChangeResult> result = keyspace.createKeyspace(options);
 			return result != null;
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e.getMessage(), e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 		
 	}
@@ -73,7 +74,7 @@ public class TritonCassandraKeyspaceMethods {
 			OperationResult<SchemaChangeResult> result = keyspace.dropKeyspace();
 			return result != null;
 		} catch (ConnectionException e) {
-			throw new TritonCassandraException(e.getMessage(), e);
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
 		}
 		
 	}
