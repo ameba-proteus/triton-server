@@ -2,7 +2,9 @@ package com.amebame.triton.service.cassandra;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.amebame.triton.client.cassandra.entity.TritonCassandraCluster;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
@@ -15,6 +17,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.AsciiSerializer;
 import com.netflix.astyanax.serializers.BooleanSerializer;
@@ -258,6 +262,40 @@ public class CassandraConverter {
 			// Make json node from serialized value
 			return Json.tree(serializer.fromBytes(bytes));
 		}
+	}
+	
+	/**
+	 * Convert {@link ColumnList} to List of {@link CassandraColumn}
+	 * @param columns
+	 * @param columnSerializer
+	 * @return
+	 */
+	public static final <C> List<CassandraColumn<C>> toCassandraColumnList(ColumnList<C> columns, Serializer<C> columnSerializer) {
+		List<CassandraColumn<C>> list = new ArrayList<>(columns.size());
+		for (Column<C> column : columns) {
+			list.add(new CassandraColumn<>(
+					column.getName(),
+					CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer)));
+		}
+		return list;
+	}
+	
+	/**
+	 * Convert {@link ColumnList} to Map of {@link String} and {@link JsonNode}
+	 * @param columns
+	 * @param columnSerializer
+	 * @param valueSerializer
+	 * @return
+	 */
+	public static final <C,V> Map<String, JsonNode> toCassandraColumnMap(ColumnList<C> columns, Serializer<C> columnSerializer, Serializer<V> valueSerializer) {
+		Map<String, JsonNode> map = new HashMap<>(columns.size());
+		for (Column<C> column : columns) {
+			map.put(
+					CassandraConverter.toString(column.getName(), columnSerializer),
+					CassandraConverter.toValueNode(column.getByteArrayValue(), valueSerializer)
+					);
+		}
+		return map;
 	}
 	
 }

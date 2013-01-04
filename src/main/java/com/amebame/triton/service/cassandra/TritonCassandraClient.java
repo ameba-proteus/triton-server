@@ -27,9 +27,11 @@ import com.amebame.triton.client.cassandra.method.SetColumns;
 import com.amebame.triton.config.TritonCassandraClusterConfiguration;
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.exception.TritonErrors;
+import com.amebame.triton.json.Json;
 import com.amebame.triton.server.TritonCleaner;
 import com.amebame.triton.server.util.BytesUtil;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
 import com.netflix.astyanax.ColumnListMutation;
@@ -469,41 +471,50 @@ public class TritonCassandraClient implements TritonCleaner {
 				}
 				// get slice rows
 				Rows<K,C> rows = slice.execute().getResult();
-				Map<String, Map<String, JsonNode>> mapmap;
-				Map<String, List<CassandraColumn<C>>> maplist;
-				if (gets.hasColumnRange()) {
-					maplist = new HashMap<>(rows.size());
-					for (Row<K, C> row : rows) {
-						String rowKey = CassandraConverter.toString(row.getKey(), keySerializer);
-						ColumnList<C> columns = row.getColumns();
-						if (columns.size() > 0) {
-							List<CassandraColumn<C>> list = new ArrayList<>();
-							for (Column<C> column : columns) {
-								list.add(new CassandraColumn<>(
-										column.getName(),
-										CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer)));
-							}
-							maplist.put(rowKey, list);
+				
+				// convert result to adaptive types
+				if (gets.hasKeyRange()) {
+					// row as array if key range specified
+					List<CassandraRow<C>> list = new ArrayList<>();
+					if (gets.hasColumnRange()) {
+						for (Row<K, C> row : rows) {
+							list.add(new CassandraRow<C>(
+									CassandraConverter.toString(row.getKey(), keySerializer),
+									CassandraConverter.toCassandraColumnList(row.getColumns(), columnSerializer)
+									));
+						}
+					} else {
+						for (Row<K, C> row : rows) {
+							list.add(new CassandraRow<C>(
+									CassandraConverter.toString(row.getKey(), keySerializer),
+									CassandraConverter.toCassandraColumnMap(row.getColumns(), columnSerializer, valueSerializer)
+									));
 						}
 					}
-					return maplist;
+					return list;
 				} else {
-					mapmap = new HashMap<>(rows.size());
-					for (Row<K, C> row : rows) {
-						String rowKey = keySerializer.getString(row.getRawKey());
-						ColumnList<C> columns = row.getColumns();
-						if (columns.size() > 0) {
-							Map<String, JsonNode> map = new HashMap<>(columns.size());
-							for (Column<C> column : columns) {
-								map.put(
-										CassandraConverter.toString(column.getName(), columnSerializer),
-										CassandraConverter.toValueNode(column.getByteArrayValue(), valueSerializer)
-										);
+					// row as map if keys are array or single string
+					if (gets.hasColumnRange()) {
+						Map<String, List<CassandraColumn<C>>> maplist = new HashMap<>(rows.size());
+						for (Row<K, C> row : rows) {
+							String rowKey = CassandraConverter.toString(row.getKey(), keySerializer);
+							ColumnList<C> columns = row.getColumns();
+							if (columns.size() > 0) {
+								maplist.put(rowKey, CassandraConverter.toCassandraColumnList(columns, columnSerializer));
 							}
-							mapmap.put(rowKey, map);
 						}
+						return maplist;
+					} else {
+						Map<String, Map<String, JsonNode>> mapmap = new HashMap<>(rows.size());
+						for (Row<K, C> row : rows) {
+							String rowKey = keySerializer.getString(row.getRawKey());
+							ColumnList<C> columns = row.getColumns();
+							if (columns.size() > 0) {
+								mapmap.put(rowKey, CassandraConverter.toCassandraColumnMap(columns, columnSerializer, valueSerializer));
+							}
+						}
+						return mapmap;
 					}
-					return mapmap;
 				}
 			}
 		} catch (ConnectionException e) {
@@ -588,14 +599,9 @@ public class TritonCassandraClient implements TritonCleaner {
 		// should get previous token if exclusive is not specified
 		TokenFactory factory = partitioner.getTokenFactory();
 		
-		if (endpoint == null) {
-			if (start) {
-				// return minimum token if this is the start token
-				return factory.toString(partitioner.getMinimumToken());
-			} else {
-				// return null if maximum token required
-				return null;
-			}
+		if (endpoint == null || endpoint.isNull()) {
+			// return null if minimum/maximum token required
+			return factory.toString(partitioner.getMinimumToken());
 		} else if (endpoint.isObject()) {
 			JsonNode value = endpoint.get("value");
 			ByteBuffer point = serializer.fromString(value.asText());
