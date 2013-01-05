@@ -275,7 +275,9 @@ public class CassandraConverter {
 		for (Column<C> column : columns) {
 			list.add(new CassandraColumn<>(
 					column.getName(),
-					CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer)));
+					CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer),
+					column.getTimestamp()
+					));
 		}
 		return list;
 	}

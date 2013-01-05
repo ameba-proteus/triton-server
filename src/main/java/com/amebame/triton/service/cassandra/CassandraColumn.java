@@ -9,13 +9,15 @@ public class CassandraColumn<C> {
 	
 	private C column;
 	private JsonNode value;
+	private long timestamp;
 
 	public CassandraColumn() {
 	}
 	
-	public CassandraColumn(C column, JsonNode value) {
+	public CassandraColumn(C column, JsonNode value, long timestamp) {
 		this.column = column;
 		this.value = value;
+		this.timestamp = timestamp;
 	}
 
 	public C getColumn() {
@@ -32,6 +34,14 @@ public class CassandraColumn<C> {
 
 	public void setValue(JsonNode value) {
 		this.value = value;
+	}
+	
+	public long getTimestamp() {
+		return timestamp;
+	}
+	
+	public void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
 	}
 
 }

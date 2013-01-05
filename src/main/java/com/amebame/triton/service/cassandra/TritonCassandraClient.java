@@ -397,7 +397,8 @@ public class TritonCassandraClient implements TritonCleaner {
 								valueSerializer);
 						list.add(new CassandraColumn<C>(
 								column.getName(),
-								valueNode
+								valueNode,
+								column.getTimestamp()
 								));
 					}
 					return list;
