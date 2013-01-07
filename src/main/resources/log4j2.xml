@@ -9,5 +9,8 @@
 		<root level="debug">
 			<appender-ref ref="console" />
 		</root>
+		<!-- 3rd party levels -->
+		<logger name="net.rubyeye.xmemcached" level="warn" />
+		<logger name="com.google.code.yanf4j" level="warn" />
 	</loggers>
 </configuration>
