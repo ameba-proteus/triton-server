@@ -1,0 +1,76 @@
+#!/bin/bash
+
+LOG_DIR=/var/log/triton
+LOG_FILE=${LOG_DIR}/triton.stdout.log
+
+CONF_DIR=/etc/triton
+CONF_PATH=${CONF_DIR}/server.json
+
+TRITON_PORT=4848
+if [ -z $JAVA_HOME ]; then
+	echo "JAVA_HOME is not specified"
+	exit 1
+fi
+JAVA_BIN="${JAVA_HOME}/bin/java"
+JAVA_OPTS='-Xmx1024m -Xms256m -Dcom.sun.management.jmxremote.port=5858 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false'
+
+BIN_DIR=`dirname $0`
+TRITON_DIR=`dirname $BIN_DIR`
+LIB_DIR="${TRITON_DIR}/lib"
+
+# exporting CLASSPATH
+CLASSPATH=$CONF_DIR
+for JAR in $LIB_DIR/*.jar
+do
+	if [ -f $JAR ]; then
+		CLASSPATH=$CLASSPATH:$JAR
+	fi
+done
+export CLASSPATH=${CLASSPATH}
+
+# check root
+#if [[ $EUID -ne 0 ]]; then
+#	echo "This script must be run as root" 1>&2
+#	exit 1;
+#fi
+
+# mkdir
+#if [ ! -d "$PID_DIR" ]; then
+#	mkdir -p "${PID_DIR}"
+#fi
+#if [ ! -d "$LOG_DIR" ]; then
+#	mkdir -p "${LOG_DIR}"
+#	chmod 777 ${LOG_DIR}
+#fi
+
+function start() {
+	echo "starting the triton server"
+	$JAVA_BIN $JAVA_OPTS com.amebame.triton.server.TritonServer -c "${CONF_PATH}" -p ${TRITON_PORT}
+}
+
+function stop() {
+	echo "stopping the triton server"
+	PIDS=`ps ax | grep java | grep TritonServer | grep $TRITON_PORT | awk '{ print $1 }'`
+	for PID in $PIDS
+	do
+		echo stopping process PID:$PID
+		kill $PID
+	done
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		# waiting 1 sec
+		sleep 1
+		start
+		;;
+	*)
+		echo "triton [start|stop|restart]"
+esac
