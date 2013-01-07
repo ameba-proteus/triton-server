@@ -506,7 +506,7 @@ public class TritonCassandraClient implements TritonCleaner {
 					} else {
 						Map<String, Map<String, JsonNode>> mapmap = new HashMap<>(rows.size());
 						for (Row<K, C> row : rows) {
-							String rowKey = keySerializer.getString(row.getRawKey());
+							String rowKey = keySerializer.getString(keySerializer.toByteBuffer(row.getKey()));
 							ColumnList<C> columns = row.getColumns();
 							if (columns.size() > 0) {
 								mapmap.put(rowKey, CassandraConverter.toCassandraColumnMap(columns, columnSerializer, valueSerializer));
@@ -747,25 +747,31 @@ public class TritonCassandraClient implements TritonCleaner {
 			);
 		}
 		
+		// iterate keys
+		if (remove.hasKeys()) {
+			for (String key : remove.getKeys()) {
+				batch.withRow(cf, CassandraConverter.toObject(key, cf.getKeySerializer())).delete();
+			}
+		}
+		
 		// iterate rows
-		for (Entry<String, List<String>> row : remove.getRows().entrySet()) {
-			String rowKey = row.getKey();
-			// prepare row mutation
-			ColumnListMutation<C> clm = batch.withRow(
-					cf,
-					CassandraConverter.toObject(rowKey, cf.getKeySerializer())
-			);
-			// get value list
-			List<String> values = row.getValue();
-			if (values == null || values.size() == 0) {
-				// remove whole row if column are not specified
-				clm.delete();
-			} else {
-				// remove all columns
-				for (String column : values) {
-					clm.deleteColumn(
-							CassandraConverter.toObject(column, cf.getColumnSerializer())
-					);
+		if (remove.hasRows()) {
+			for (Entry<String, List<String>> row : remove.getRows().entrySet()) {
+				String rowKey = row.getKey();
+				// get value list
+				List<String> values = row.getValue();
+				if (values != null && values.size() > 0) {
+					// prepare row mutation
+					ColumnListMutation<C> clm = batch.withRow(
+							cf,
+							CassandraConverter.toObject(rowKey, cf.getKeySerializer())
+							);
+					// remove all columns
+					for (String column : values) {
+						clm.deleteColumn(
+								CassandraConverter.toObject(column, cf.getColumnSerializer())
+								);
+					}
 				}
 			}
 		}

@@ -309,10 +309,12 @@ public class TritonCassandraClientTest {
 		remove.setCluster(clusterName);
 		remove.setKeyspace(keyspaceName);
 		remove.setColumnFamily(familyName);
+		List<String> keys = new ArrayList<>();
 		Map<String, List<String>> removes = new HashMap<>();
 		// only single row with columns
 		removes.put("row1", Arrays.asList("column1", "column2"));
 		remove.setRows(removes);
+		remove.setKeys(keys);
 		assertTrue(client.send(remove, Boolean.class));
 		
 		result = client.send(get);
@@ -324,9 +326,9 @@ public class TritonCassandraClientTest {
 		assertEquals(3, result.get("row2").size());
 		assertEquals(3, result.get("row3").size());
 		
+		remove.setKey("row2");
 		removes.clear();
 		// remove entire row
-		removes.put("row2", new ArrayList<String>());
 		assertTrue(client.send(remove, Boolean.class));
 		
 		result = client.send(get);
@@ -337,6 +339,7 @@ public class TritonCassandraClientTest {
 		
 		// remove multiple row columns
 		removes.clear();
+		keys.clear();
 		removes.put("row1", Arrays.asList("column3"));
 		removes.put("row3", Arrays.asList("column2","column3"));
 		assertTrue(client.send(remove, Boolean.class));
