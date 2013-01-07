@@ -477,17 +477,23 @@ public class TritonCassandraClient implements TritonCleaner {
 					List<CassandraRow<C>> list = new ArrayList<>();
 					if (gets.hasColumnRange()) {
 						for (Row<K, C> row : rows) {
-							list.add(new CassandraRow<C>(
-									CassandraConverter.toString(row.getKey(), keySerializer),
-									CassandraConverter.toCassandraColumnList(row.getColumns(), columnSerializer)
-									));
+							ColumnList<C> columns = row.getColumns();
+							if (!columns.isEmpty()) {
+								list.add(new CassandraRow<C>(
+										CassandraConverter.toString(row.getKey(), keySerializer),
+										CassandraConverter.toCassandraColumnList(columns, columnSerializer)
+										));
+							}
 						}
 					} else {
 						for (Row<K, C> row : rows) {
-							list.add(new CassandraRow<C>(
-									CassandraConverter.toString(row.getKey(), keySerializer),
-									CassandraConverter.toCassandraColumnMap(row.getColumns(), columnSerializer, valueSerializer)
-									));
+							ColumnList<C> columns = row.getColumns();
+							if (!columns.isEmpty()) {
+								list.add(new CassandraRow<C>(
+										CassandraConverter.toString(row.getKey(), keySerializer),
+										CassandraConverter.toCassandraColumnMap(columns, columnSerializer, valueSerializer)
+										));
+							}
 						}
 					}
 					return list;
@@ -498,7 +504,7 @@ public class TritonCassandraClient implements TritonCleaner {
 						for (Row<K, C> row : rows) {
 							String rowKey = CassandraConverter.toString(row.getKey(), keySerializer);
 							ColumnList<C> columns = row.getColumns();
-							if (columns.size() > 0) {
+							if (!columns.isEmpty()) {
 								maplist.put(rowKey, CassandraConverter.toCassandraColumnList(columns, columnSerializer));
 							}
 						}
@@ -508,7 +514,7 @@ public class TritonCassandraClient implements TritonCleaner {
 						for (Row<K, C> row : rows) {
 							String rowKey = keySerializer.getString(keySerializer.toByteBuffer(row.getKey()));
 							ColumnList<C> columns = row.getColumns();
-							if (columns.size() > 0) {
+							if (!columns.isEmpty()) {
 								mapmap.put(rowKey, CassandraConverter.toCassandraColumnMap(columns, columnSerializer, valueSerializer));
 							}
 						}
