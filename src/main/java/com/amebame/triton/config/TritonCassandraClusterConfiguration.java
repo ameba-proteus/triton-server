@@ -4,6 +4,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
+import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.ConsistencyLevel;
 
@@ -19,10 +20,13 @@ public class TritonCassandraClusterConfiguration {
 	private ConnectionPoolConfigurationImpl poolConfig;
 
 	public TritonCassandraClusterConfiguration() {
-		astyanaxConfig = new AstyanaxConfigurationImpl();
+		astyanaxConfig = new AstyanaxConfigurationImpl()
 		// set default consistency to QUORUM
-		astyanaxConfig.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM);
-		astyanaxConfig.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM);
+		.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
+		.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
+		.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
+		.setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+		;
 		poolConfig = new ConnectionPoolConfigurationImpl("astyanax-pool");
 	}
 
