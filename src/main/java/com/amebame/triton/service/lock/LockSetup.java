@@ -10,9 +10,11 @@ public class LockSetup {
 	
 	@Inject private TritonServerContext context;
 	
-	@Inject private LockContext lockContext;
+	@Inject private LockManager manager;
 	
 	@Inject private LockMethods methods;
+	
+	@Inject private LockClearner cleaner;
 	
 	@Inject private TritonScheduler scheduler;
 
@@ -23,6 +25,6 @@ public class LockSetup {
 	public void setup() {
 		context.addServerMethod(methods);
 		// execute context cleaning with 5 sec interval
-		scheduler.scheduleWithFixedDelay(lockContext, 5000L, 5000L);
+		scheduler.scheduleWithFixedDelay(cleaner, 5000L, 5000L);
 	}
 }

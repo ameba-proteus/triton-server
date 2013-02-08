@@ -1,40 +1,35 @@
 package com.amebame.triton.service.lock.method;
 
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-
 import javax.inject.Inject;
+
+import org.jboss.netty.channel.Channel;
 
 import com.amebame.triton.client.lock.method.LockAcquire;
 import com.amebame.triton.client.lock.method.LockRelease;
+import com.amebame.triton.protocol.TritonMessage;
 import com.amebame.triton.server.TritonMethod;
-import com.amebame.triton.service.lock.LockContext;
+import com.amebame.triton.service.lock.LockManager;
+import com.amebame.triton.service.lock.LockOwner;
 
 public class LockMethods {
 	
-	private LockContext context;
+	private LockManager manager;
 
 	@Inject
-	public LockMethods(LockContext context) {
-		this.context = context;
+	public LockMethods(LockManager manager) {
+		this.manager = manager;
 	}
 	
-	@TritonMethod("lock.acquire")
-	public boolean acquire(LockAcquire acquire) {
-		Semaphore semaphore = context.create(acquire.getKey(), acquire.getTimeout());
-		try {
-			return semaphore.tryAcquire(acquire.getTimeout(), TimeUnit.MILLISECONDS);
-		} catch (InterruptedException e) {
-			return false;
-		}
+	@TritonMethod(value="lock.acquire", async=true)
+	public void acquire(Channel channel, TritonMessage message, LockAcquire acquire) {
+		LockOwner owner = new LockOwner(channel, message.getCallId());
+		manager.lock(owner, acquire.getKey(), acquire.getTimeout());
 	}
 	
 	@TritonMethod("lock.release")
-	public boolean release(LockRelease release) {
-		Semaphore semaphore = context.get(release.getKey());
-		if (semaphore != null) {
-			semaphore.release();
-		}
+	public boolean release(Channel channel, TritonMessage message, LockRelease release) {
+		LockOwner owner = new LockOwner(channel, message.getCallId(), release.getOwnerId());
+		manager.unlock(owner, release.getKey());
 		return true;
 	}
 
