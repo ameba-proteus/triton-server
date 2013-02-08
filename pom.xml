@@ -223,6 +223,7 @@
 		</dependency>
 		
 		<!-- Netflix Curator (Zookeeper recipes) -->
+		<!-- 
 		<dependency>
 			<groupId>com.netflix.curator</groupId>
 			<artifactId>curator-recipes</artifactId>
@@ -246,6 +247,7 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		-->
 
 		<!-- xmemcached driver -->
 		<dependency>
