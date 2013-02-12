@@ -542,13 +542,13 @@ public class TritonCassandraClient implements TritonCleaner {
 		Boolean reversed = Boolean.FALSE;
 		Integer limit = DEFAULT_LIMIT_COLUMNS;
 		
-		if (node.has("start")) {
+		if (node.has("start") && !node.get("start").isNull()) {
 			// set start of the range
 			start = getRangeBuffer(node.get("start"), columnSerializer, true);
 		} else {
 			start = EMPTY_BUFFER;
 		}
-		if (node.has("end")) {
+		if (node.has("end") && !node.get("end").isNull()) {
 			end = getRangeBuffer(node.get("end"), columnSerializer, false);
 		} else {
 			end = EMPTY_BUFFER;
