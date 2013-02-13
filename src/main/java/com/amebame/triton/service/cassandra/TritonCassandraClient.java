@@ -380,6 +380,9 @@ public class TritonCassandraClient implements TritonCleaner {
 				// get column list
 				ColumnList<C> columns = row.execute().getResult();
 				if (gets.hasSingleColumn()) {
+					if (columns.size() <= 0) {
+						return null;
+					}
 					Column<C> column = columns.getColumnByIndex(0);
 					if (column == null) {
 						return null;
