@@ -12,5 +12,6 @@
 		<!-- 3rd party levels -->
 		<logger name="net.rubyeye.xmemcached" level="warn" />
 		<logger name="com.google.code.yanf4j" level="warn" />
+		<logger name="com.netflix.astyanax" level="warn" />
 	</loggers>
 </configuration>
