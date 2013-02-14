@@ -17,8 +17,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.amebame.triton.client.TritonClient;
+import com.amebame.triton.client.cassandra.entity.TritonCassandraBatchOperation;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
+import com.amebame.triton.client.cassandra.method.BatchUpdate;
 import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
 import com.amebame.triton.client.cassandra.method.CreateKeyspace;
 import com.amebame.triton.client.cassandra.method.DropKeyspace;
@@ -352,6 +354,120 @@ public class TritonCassandraClientTest {
 		assertTrue(result.get("row3").has("column1"));
 		
 		log(result);
+	}
+	
+	@Test
+	public void testBatch() throws TritonException {
+		
+		// creating batch test family
+		CreateColumnFamily create = new CreateColumnFamily();
+		create.setCluster(clusterName);
+		create.setKeyspace(keyspaceName);
+		create.setColumnFamily("batch1");
+		create.setKeyValidationClass("UTF8Type");
+		create.setComparator("UTF8Type");
+		create.setDefaultValidationClass("UTF8Type");
+		assertTrue(client.send(create, Boolean.class));
+		
+		// creating second batch test family
+		create = new CreateColumnFamily();
+		create.setCluster(clusterName);
+		create.setKeyspace(keyspaceName);
+		create.setColumnFamily("batch2");
+		create.setKeyValidationClass("UTF8Type");
+		create.setComparator("IntegerType");
+		create.setDefaultValidationClass("UTF8Type");
+		assertTrue(client.send(create, Boolean.class));
+		
+		BatchUpdate batch = new BatchUpdate();
+		batch.setCluster(clusterName);
+		batch.setKeyspace(keyspaceName);
+		
+		// return false if batch is empty
+		assertFalse(client.send(batch, Boolean.class));
+		
+		TritonCassandraBatchOperation operation = new TritonCassandraBatchOperation();
+		operation.setColumnFamily("batch1");
+		operation.putUpdate("row1", "column1", Json.text("value11"));
+		operation.putUpdate("row1", "column2", Json.text("value12"));
+		operation.putUpdate("row2", "column1", Json.text("value21"));
+		batch.addOperation(operation);
+		
+		operation = new TritonCassandraBatchOperation();
+		operation.setColumnFamily("batch2");
+		operation.putUpdate("row1", "100", Json.text("value100"));
+		operation.putUpdate("row2", "200", Json.text("value200"));
+		batch.addOperation(operation);
+		assertTrue(client.send(batch, Boolean.class));
+		
+		GetColumns get = new GetColumns();
+		get.setCluster(clusterName);
+		get.setKeyspace(keyspaceName);
+		get.setColumnFamily("batch1");
+		
+		get.setKey(Json.text("row1"));
+		
+		JsonNode node = client.send(get);
+		assertTrue(node.has("column1"));
+		assertTrue(node.has("column2"));
+		assertEquals("value11", node.get("column1").asText());
+		assertEquals("value12", node.get("column2").asText());
+		assertEquals(2, node.size());
+		
+		get.setKey(Json.text("row2"));
+		node = client.send(get);
+		assertTrue(node.has("column1"));
+		assertEquals("value21", node.get("column1").asText());
+		assertEquals(1, node.size());
+		
+		get.setColumnFamily("batch2");
+		get.setKey(Json.text("row1"));
+		node = client.send(get);
+		assertTrue(node.has("100"));
+		assertEquals("value100", node.get("100").asText());
+		assertEquals(1, node.size());
+		
+		get.setKey(Json.text("row2"));
+		node = client.send(get);
+		assertTrue(node.has("200"));
+		assertEquals("value200", node.get("200").asText());
+		assertEquals(1, node.size());
+		
+		// start removing with batch operation
+		batch = new BatchUpdate();
+		batch.setCluster(clusterName);
+		batch.setKeyspace(keyspaceName);
+		
+		operation = new TritonCassandraBatchOperation();
+		operation.setColumnFamily("batch1");
+		operation.putRemove("row1", "column1");
+		operation.putRemove("row2");
+		batch.addOperation(operation);
+		
+		operation = new TritonCassandraBatchOperation();
+		operation.setColumnFamily("batch2");
+		operation.putRemove("row1");
+		batch.addOperation(operation);
+		
+		assertTrue(client.send(batch, Boolean.class));
+		
+		get.setColumnFamily("batch1");
+		get.setKey(Json.text("row1"));
+		
+		node = client.send(get);
+		assertEquals(1, node.size());
+		
+		get.setKey(Json.text("row2"));
+		node = client.send(get);
+		assertTrue(node.isNull());
+		
+		get.setColumnFamily("batch2");
+		get.setKey(Json.text("row1"));
+		node = client.send(get);
+		assertTrue(node.isNull());
+		
+		log(node.toString());
+		
 	}
 	
 	private static final void log(Object ... args) {
