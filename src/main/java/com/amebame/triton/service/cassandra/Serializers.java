@@ -15,6 +15,7 @@ import com.netflix.astyanax.serializers.BytesArraySerializer;
 import com.netflix.astyanax.serializers.DateSerializer;
 import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.FloatSerializer;
+import com.netflix.astyanax.serializers.Int32Serializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -39,7 +40,8 @@ public class Serializers {
 		map.put("BytesType", BytesArraySerializer.get());
 		map.put("AsciiType", AsciiSerializer.get());
 		map.put("UTF8Type", StringSerializer.get());
-		map.put("IntegerTYpe", IntegerSerializer.get());
+		map.put("IntegerType", IntegerSerializer.get());
+		map.put("Int32Type", Int32Serializer.get());
 		map.put("LongType", LongSerializer.get());
 		map.put("UUIDType", UUIDSerializer.get());
 		map.put("TimeUUIDType", TimeUUIDSerializer.get());
