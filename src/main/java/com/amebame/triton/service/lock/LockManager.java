@@ -225,6 +225,7 @@ public class LockManager {
 			LockOwner waiter = waiters.poll();
 			while (waiter != null) {
 				waiter.sendFail();
+				waiter = waiters.poll();
 			}
 		}
 

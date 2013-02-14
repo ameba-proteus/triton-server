@@ -92,6 +92,9 @@ public class LockOwner implements Comparable<LockOwner> {
 	 * @return
 	 */
 	public boolean sendFail() {
+		if (!channel.isWritable()) {
+			return false;
+		}
 		TritonMessage message = new TritonMessage(TritonMessage.REPLY, callId, -1);
 		ChannelFuture future = channel.write(message);
 		try {
