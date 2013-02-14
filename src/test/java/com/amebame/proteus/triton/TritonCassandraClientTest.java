@@ -466,8 +466,6 @@ public class TritonCassandraClientTest {
 		node = client.send(get);
 		assertTrue(node.isNull());
 		
-		log(node.toString());
-		
 	}
 	
 	private static final void log(Object ... args) {
