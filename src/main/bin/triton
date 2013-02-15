@@ -45,7 +45,7 @@ export CLASSPATH=${CLASSPATH}
 
 function start() {
 	echo "starting the triton server"
-	$JAVA_BIN $JAVA_OPTS com.amebame.triton.server.TritonServer -c "${CONF_PATH}" -p ${TRITON_PORT}
+	exec $JAVA_BIN $JAVA_OPTS com.amebame.triton.server.TritonServer -c "${CONF_PATH}" -p ${TRITON_PORT} >> ${LOG_FILE} 2>&1 < /dev/null &
 }
 
 function stop() {
