@@ -29,6 +29,7 @@ import com.amebame.triton.client.cassandra.method.ListColumnFamily;
 import com.amebame.triton.client.cassandra.method.ListKeyspace;
 import com.amebame.triton.client.cassandra.method.RemoveColumns;
 import com.amebame.triton.client.cassandra.method.SetColumns;
+import com.amebame.triton.client.cassandra.method.TruncateColumnFamily;
 import com.amebame.triton.exception.TritonClientConnectException;
 import com.amebame.triton.exception.TritonClientException;
 import com.amebame.triton.exception.TritonException;
@@ -354,6 +355,58 @@ public class TritonCassandraClientTest {
 		assertTrue(result.get("row3").has("column1"));
 		
 		log(result);
+	}
+	
+	@Test
+	public void testTruncate() throws TritonException {
+		
+		String familyName = "test_truncate";
+		
+		// creating test family
+		CreateColumnFamily create = new CreateColumnFamily();
+		create.setCluster(clusterName);
+		create.setKeyspace(keyspaceName);
+		create.setColumnFamily(familyName);
+		create.setKeyValidationClass("UTF8Type");
+		create.setComparator("UTF8Type");
+		create.setDefaultValidationClass("UTF8Type");
+		assertTrue(client.send(create, Boolean.class));
+		
+		// rows
+		SetColumns set = new SetColumns();
+		Map<String, Map<String, JsonNode>> rows = new HashMap<>();
+		Map<String, JsonNode> columns = new HashMap<>();
+		set.setCluster(clusterName);
+		set.setKeyspace(keyspaceName);
+		set.setColumnFamily(familyName);
+		columns.put("column1", Json.text("value11"));
+		rows.put("row1", columns);
+		columns = new HashMap<>();
+		columns.put("column1", Json.text("value21"));
+		rows.put("row2", columns);
+		columns = new HashMap<>();
+		columns.put("column1", Json.text("lalue31"));
+		rows.put("row3", columns);
+		set.setRows(rows);
+		assertTrue(client.send(set, Boolean.class));
+		
+		GetColumns get = new GetColumns();
+		get.setCluster(clusterName);
+		get.setKeyspace(keyspaceName);
+		get.setColumnFamily(familyName);
+		
+		JsonNode result = client.send(get);
+		assertEquals(3, result.size());
+		
+		// truncate
+		TruncateColumnFamily truncate = new TruncateColumnFamily();
+		truncate.setCluster(clusterName);
+		truncate.setKeyspace(keyspaceName);
+		truncate.setColumnFamily(familyName);
+		assertTrue(client.send(truncate, Boolean.class));
+		
+		result = client.send(get);
+		assertEquals(0, result.size());
 	}
 	
 	@Test

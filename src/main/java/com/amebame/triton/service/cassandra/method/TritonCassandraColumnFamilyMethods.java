@@ -13,6 +13,7 @@ import com.amebame.triton.client.cassandra.method.BatchUpdate;
 import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
 import com.amebame.triton.client.cassandra.method.DropColumnFamily;
 import com.amebame.triton.client.cassandra.method.ListColumnFamily;
+import com.amebame.triton.client.cassandra.method.TruncateColumnFamily;
 import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.server.TritonMethod;
 import com.amebame.triton.service.cassandra.CassandraConverter;
@@ -75,6 +76,17 @@ public class TritonCassandraColumnFamilyMethods {
 		Keyspace keyspace = client.getKeyspace(drop.getCluster(), drop.getKeyspace());
 		try {
 			OperationResult<SchemaChangeResult> result = keyspace.dropColumnFamily(drop.getColumnFamily());
+			return result != null;
+		} catch (ConnectionException e) {
+			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
+		}
+	}
+	
+	@TritonMethod("cassandra.columnfamily.truncate")
+	public boolean truncateColumnFamily(TruncateColumnFamily truncate) {
+		Keyspace keyspace = client.getKeyspace(truncate.getCluster(), truncate.getKeyspace());
+		try {
+			OperationResult<Void> result = keyspace.truncateColumnFamily(truncate.getColumnFamily());
 			return result != null;
 		} catch (ConnectionException e) {
 			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
