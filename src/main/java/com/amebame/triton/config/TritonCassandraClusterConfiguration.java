@@ -25,7 +25,8 @@ public class TritonCassandraClusterConfiguration {
 		.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
 		.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
 		.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-		.setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
+		.setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
+		//.setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
 		;
 		poolConfig = new ConnectionPoolConfigurationImpl("astyanax-pool");
 	}
