@@ -556,6 +556,15 @@ public class TritonCassandraClient implements TritonCleaner {
 		} else {
 			end = EMPTY_BUFFER;
 		}
+		// ignore if start or end node exists
+		if (start == EMPTY_BUFFER && end == EMPTY_BUFFER) {
+			if (node.has("startWith") && !node.get("startWith").isNull()) {
+				String prefix = node.get("startWith").asText();
+				start = getStartWithBuffer(prefix, columnSerializer, true);
+				end = getStartWithBuffer(prefix, columnSerializer, false);
+			}
+		}
+		
 		if (node.has("reversed")) {
 			// mark reversed
 			reversed = node.get("reversed").asBoolean();
@@ -572,9 +581,10 @@ public class TritonCassandraClient implements TritonCleaner {
 	}
 	
 	/**
-	 * Get buffer for start of the range.
+	 * Get buffer for the range.
 	 * @param endpoint
 	 * @param serializer
+	 * @param start
 	 * @return
 	 */
 	private <C> ByteBuffer getRangeBuffer(JsonNode endpoint, Serializer<C> serializer, boolean start) {
@@ -596,6 +606,22 @@ public class TritonCassandraClient implements TritonCleaner {
 		}
 	}
 	
+	/**
+	 * Get buffer for the start with range.
+	 * @param prefix
+	 * @param serializer
+	 * @param start
+	 * @return
+	 */
+	private ByteBuffer getStartWithBuffer(String prefix,
+			Serializer<?> columnSerializer, boolean start) {
+		if (start) {
+			return columnSerializer.fromString(prefix);
+		} else {
+			return columnSerializer.fromString(prefix+"\uffff");
+		}
+	}
+
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private <C> String getRangeToken(
 			JsonNode endpoint,
@@ -625,7 +651,7 @@ public class TritonCassandraClient implements TritonCleaner {
 				// get exclusive token
 				if (start) {
 					// start token is default to exclusive.
-					return partitioner.getTokenFactory().toString(token);
+					return factory.toString(token);
 				} else {
 					// should get previous token
 					return getPreviousToken(token);
@@ -638,14 +664,22 @@ public class TritonCassandraClient implements TritonCleaner {
 					return getPreviousToken(token);
 				} else {
 					// end token is default to inclusive
-					return partitioner.getTokenFactory().toString(token);
+					return factory.toString(token);
 				}
 			}
 		} else {
-			// resolve range from a single text value
-			String key = endpoint.asText();
-			ByteBuffer buffer = serializer.fromString(key);
-			return factory.toString(factory.fromByteArray(buffer));
+			ByteBuffer point = serializer.fromString(endpoint.asText());
+			// get token string
+			Token<?> token = partitioner.getToken(point);
+			// get inclusive token
+			if (start) {
+				// start token is exlusive default
+				// should get previous value to get inclusive value
+				return getPreviousToken(token);
+			} else {
+				// end token is default to inclusive
+				return factory.toString(token);
+			}
 		}
 	}
 	
