@@ -21,10 +21,13 @@ public class TritonServerMethod {
 	
 	private Class<?>[] parameterTypes;
 	
-	public TritonServerMethod(Object object, Method method) {
+	private TritonMethod annotation;
+	
+	public TritonServerMethod(Object object, Method method, TritonMethod annotation) {
 		this.object = object;
 		this.method = method;
 		this.parameterTypes = method.getParameterTypes();
+		this.annotation = annotation;
 	}
 	
 	public Object getObject() {
@@ -33,6 +36,10 @@ public class TritonServerMethod {
 	
 	public Method getMethod() {
 		return method;
+	}
+	
+	public boolean isSynchronous() {
+		return !annotation.async();
 	}
 	
 	public Object invoke(Channel channel, TritonMessage message, JsonNode body) {

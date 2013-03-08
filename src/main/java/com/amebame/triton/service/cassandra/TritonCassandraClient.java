@@ -380,6 +380,9 @@ public class TritonCassandraClient implements TritonCleaner {
 				// get column list
 				ColumnList<C> columns = row.execute().getResult();
 				if (gets.hasSingleColumn()) {
+					if (columns.size() <= 0) {
+						return null;
+					}
 					Column<C> column = columns.getColumnByIndex(0);
 					if (column == null) {
 						return null;
@@ -477,17 +480,23 @@ public class TritonCassandraClient implements TritonCleaner {
 					List<CassandraRow<C>> list = new ArrayList<>();
 					if (gets.hasColumnRange()) {
 						for (Row<K, C> row : rows) {
-							list.add(new CassandraRow<C>(
-									CassandraConverter.toString(row.getKey(), keySerializer),
-									CassandraConverter.toCassandraColumnList(row.getColumns(), columnSerializer)
-									));
+							ColumnList<C> columns = row.getColumns();
+							if (!columns.isEmpty()) {
+								list.add(new CassandraRow<C>(
+										CassandraConverter.toString(row.getKey(), keySerializer),
+										CassandraConverter.toCassandraColumnList(columns, columnSerializer)
+										));
+							}
 						}
 					} else {
 						for (Row<K, C> row : rows) {
-							list.add(new CassandraRow<C>(
-									CassandraConverter.toString(row.getKey(), keySerializer),
-									CassandraConverter.toCassandraColumnMap(row.getColumns(), columnSerializer, valueSerializer)
-									));
+							ColumnList<C> columns = row.getColumns();
+							if (!columns.isEmpty()) {
+								list.add(new CassandraRow<C>(
+										CassandraConverter.toString(row.getKey(), keySerializer),
+										CassandraConverter.toCassandraColumnMap(columns, columnSerializer, valueSerializer)
+										));
+							}
 						}
 					}
 					return list;
@@ -498,7 +507,7 @@ public class TritonCassandraClient implements TritonCleaner {
 						for (Row<K, C> row : rows) {
 							String rowKey = CassandraConverter.toString(row.getKey(), keySerializer);
 							ColumnList<C> columns = row.getColumns();
-							if (columns.size() > 0) {
+							if (!columns.isEmpty()) {
 								maplist.put(rowKey, CassandraConverter.toCassandraColumnList(columns, columnSerializer));
 							}
 						}
@@ -506,9 +515,9 @@ public class TritonCassandraClient implements TritonCleaner {
 					} else {
 						Map<String, Map<String, JsonNode>> mapmap = new HashMap<>(rows.size());
 						for (Row<K, C> row : rows) {
-							String rowKey = keySerializer.getString(row.getRawKey());
+							String rowKey = keySerializer.getString(keySerializer.toByteBuffer(row.getKey()));
 							ColumnList<C> columns = row.getColumns();
-							if (columns.size() > 0) {
+							if (!columns.isEmpty()) {
 								mapmap.put(rowKey, CassandraConverter.toCassandraColumnMap(columns, columnSerializer, valueSerializer));
 							}
 						}
@@ -536,17 +545,26 @@ public class TritonCassandraClient implements TritonCleaner {
 		Boolean reversed = Boolean.FALSE;
 		Integer limit = DEFAULT_LIMIT_COLUMNS;
 		
-		if (node.has("start")) {
+		if (node.has("start") && !node.get("start").isNull()) {
 			// set start of the range
 			start = getRangeBuffer(node.get("start"), columnSerializer, true);
 		} else {
 			start = EMPTY_BUFFER;
 		}
-		if (node.has("end")) {
+		if (node.has("end") && !node.get("end").isNull()) {
 			end = getRangeBuffer(node.get("end"), columnSerializer, false);
 		} else {
 			end = EMPTY_BUFFER;
 		}
+		// ignore if start or end node exists
+		if (start == EMPTY_BUFFER && end == EMPTY_BUFFER) {
+			if (node.has("startWith") && !node.get("startWith").isNull()) {
+				String prefix = node.get("startWith").asText();
+				start = getStartWithBuffer(prefix, columnSerializer, true);
+				end = getStartWithBuffer(prefix, columnSerializer, false);
+			}
+		}
+		
 		if (node.has("reversed")) {
 			// mark reversed
 			reversed = node.get("reversed").asBoolean();
@@ -563,9 +581,10 @@ public class TritonCassandraClient implements TritonCleaner {
 	}
 	
 	/**
-	 * Get buffer for start of the range.
+	 * Get buffer for the range.
 	 * @param endpoint
 	 * @param serializer
+	 * @param start
 	 * @return
 	 */
 	private <C> ByteBuffer getRangeBuffer(JsonNode endpoint, Serializer<C> serializer, boolean start) {
@@ -587,6 +606,22 @@ public class TritonCassandraClient implements TritonCleaner {
 		}
 	}
 	
+	/**
+	 * Get buffer for the start with range.
+	 * @param prefix
+	 * @param serializer
+	 * @param start
+	 * @return
+	 */
+	private ByteBuffer getStartWithBuffer(String prefix,
+			Serializer<?> columnSerializer, boolean start) {
+		if (start) {
+			return columnSerializer.fromString(prefix);
+		} else {
+			return columnSerializer.fromString(prefix+"\uffff");
+		}
+	}
+
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private <C> String getRangeToken(
 			JsonNode endpoint,
@@ -616,7 +651,7 @@ public class TritonCassandraClient implements TritonCleaner {
 				// get exclusive token
 				if (start) {
 					// start token is default to exclusive.
-					return partitioner.getTokenFactory().toString(token);
+					return factory.toString(token);
 				} else {
 					// should get previous token
 					return getPreviousToken(token);
@@ -629,14 +664,22 @@ public class TritonCassandraClient implements TritonCleaner {
 					return getPreviousToken(token);
 				} else {
 					// end token is default to inclusive
-					return partitioner.getTokenFactory().toString(token);
+					return factory.toString(token);
 				}
 			}
 		} else {
-			// resolve range from a single text value
-			String key = endpoint.asText();
-			ByteBuffer buffer = serializer.fromString(key);
-			return factory.toString(factory.fromByteArray(buffer));
+			ByteBuffer point = serializer.fromString(endpoint.asText());
+			// get token string
+			Token<?> token = partitioner.getToken(point);
+			// get inclusive token
+			if (start) {
+				// start token is exlusive default
+				// should get previous value to get inclusive value
+				return getPreviousToken(token);
+			} else {
+				// end token is default to inclusive
+				return factory.toString(token);
+			}
 		}
 	}
 	
@@ -747,25 +790,31 @@ public class TritonCassandraClient implements TritonCleaner {
 			);
 		}
 		
+		// iterate keys
+		if (remove.hasKeys()) {
+			for (String key : remove.getKeys()) {
+				batch.withRow(cf, CassandraConverter.toObject(key, cf.getKeySerializer())).delete();
+			}
+		}
+		
 		// iterate rows
-		for (Entry<String, List<String>> row : remove.getRows().entrySet()) {
-			String rowKey = row.getKey();
-			// prepare row mutation
-			ColumnListMutation<C> clm = batch.withRow(
-					cf,
-					CassandraConverter.toObject(rowKey, cf.getKeySerializer())
-			);
-			// get value list
-			List<String> values = row.getValue();
-			if (values == null || values.size() == 0) {
-				// remove whole row if column are not specified
-				clm.delete();
-			} else {
-				// remove all columns
-				for (String column : values) {
-					clm.deleteColumn(
-							CassandraConverter.toObject(column, cf.getColumnSerializer())
-					);
+		if (remove.hasRows()) {
+			for (Entry<String, List<String>> row : remove.getRows().entrySet()) {
+				String rowKey = row.getKey();
+				// get value list
+				List<String> values = row.getValue();
+				if (values != null && values.size() > 0) {
+					// prepare row mutation
+					ColumnListMutation<C> clm = batch.withRow(
+							cf,
+							CassandraConverter.toObject(rowKey, cf.getKeySerializer())
+							);
+					// remove all columns
+					for (String column : values) {
+						clm.deleteColumn(
+								CassandraConverter.toObject(column, cf.getColumnSerializer())
+								);
+					}
 				}
 			}
 		}

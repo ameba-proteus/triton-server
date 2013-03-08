@@ -15,4 +15,9 @@ public @interface TritonMethod {
 	 */
 	String value();
 	
+	/**
+	 * asynchronous method flag
+	 * @return
+	 */
+	boolean async() default false;
 }

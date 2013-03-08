@@ -4,6 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -57,14 +60,15 @@ public class TritonLockTest {
 			public void run() {
 				try {
 					// try lock
-					assertTrue(client.send(new LockAcquire("key")).asBoolean());
+					int ownerId = client.send(new LockAcquire("key")).asInt();
+					assertTrue(ownerId >= 0);
 					// increment one
 					assertEquals(1, value.incrementAndGet());
 					// sleep 100 ms
 					Thread.sleep(500);
 					assertEquals(2, value.incrementAndGet());
 					// release
-					assertTrue(client.send(new LockRelease("key")).asBoolean());
+					assertTrue(client.send(new LockRelease("key", ownerId)).asBoolean());
 				} catch (Exception e) {
 					fail(e.getMessage());
 					success.set(false);
@@ -75,11 +79,12 @@ public class TritonLockTest {
 			public void run() {
 				try {
 					// try lock
-					assertTrue(client.send(new LockAcquire("key")).asBoolean());
+					int ownerId = client.send(new LockAcquire("key")).asInt();
+					assertTrue(ownerId >= 0);
 					// increment one
 					assertEquals(3, value.incrementAndGet());
 					// release
-					assertTrue(client.send(new LockRelease("key")).asBoolean());
+					assertTrue(client.send(new LockRelease("key", ownerId)).asBoolean());
 				} catch (Exception e) {
 					fail(e.getMessage());
 					success.set(false);
@@ -97,4 +102,72 @@ public class TritonLockTest {
 		assertTrue(success.get());
 	}
 	
+	@Test
+	public void testLockConcurrent() throws TritonClientException, InterruptedException {
+		final AtomicInteger value = new AtomicInteger();
+		final AtomicBoolean success = new AtomicBoolean(true);
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+		for (int i = 0; i < 10; i++) {
+			Runnable lockThread1 = new Runnable() {
+				public void run() {
+					try {
+						// try lock
+						int ownerId = client.send(new LockAcquire("key")).asInt();
+						assertTrue(ownerId >= 0);
+						// increment one
+						assertEquals(value.get()+1, value.incrementAndGet());
+						// sleep 100 ms
+						Thread.sleep(500);
+						assertEquals(value.get()+1, value.incrementAndGet());
+						// release
+						assertTrue(client.send(new LockRelease("key", ownerId)).asBoolean());
+					} catch (Exception e) {
+						fail(e.getMessage());
+						success.set(false);
+					}
+				}	
+			};
+			Runnable lockThread2 = new Runnable() {
+				public void run() {
+					try {
+						// try lock
+						int ownerId = client.send(new LockAcquire("key")).asInt();
+						assertTrue(ownerId >= 0);
+						// increment one
+						assertEquals(value.get()+1, value.incrementAndGet());
+						// release
+						assertTrue(client.send(new LockRelease("key", ownerId)).asBoolean());
+					} catch (Exception e) {
+						fail(e.getMessage());
+						success.set(false);
+					}
+				}
+			};
+			Runnable lockThread3 = new Runnable() {
+				public void run() {
+					try {
+						// try lock
+						int ownerId = client.send(new LockAcquire("key")).asInt();
+						assertTrue(ownerId >= 0);
+						// increment one
+						assertEquals(value.get()+1, value.incrementAndGet());
+						// sleep 100 ms
+						Thread.sleep(200);
+						assertEquals(value.get()+1, value.incrementAndGet());
+						// release
+						assertTrue(client.send(new LockRelease("key", ownerId)).asBoolean());
+					} catch (Exception e) {
+						fail(e.getMessage());
+						success.set(false);
+					}
+				}	
+			};
+			executor.submit(lockThread1);
+			executor.submit(lockThread2);
+			executor.submit(lockThread3);
+		}
+		executor.shutdown();
+		executor.awaitTermination(60L, TimeUnit.SECONDS);
+		assertTrue(success.get());
+	}
 }

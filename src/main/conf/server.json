@@ -1,0 +1,17 @@
+{
+	"cassandra": {
+		"clusters": {
+			"test": {
+				"name": "Test Cluster",
+				"seeds": ["127.0.0.1"]
+			}
+		}
+	},
+	"memcached": {
+		"clusters": {
+			"test": {
+				"hosts": ["127.0.0.1:11211"]
+			}
+		}
+	}
+}

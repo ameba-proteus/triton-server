@@ -4,9 +4,14 @@
 		<Console name="console" target="SYSTEM_OUT">
 			<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p [%t] %m%ex - (%F:%L)%n" />
 		</Console>
+		<RollingFile name="rolling" filename="/var/log/triton/triton-server.log"
+					 filePattern="/var/log/triton/triton-server.%d{yyyy-MM-dd}.log.gz">
+			<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p [%t] %m%ex - (%F:%L)%n" />
+			<TimeBasedTriggeringPolicy />
+		</RollingFile>
 	</appenders>
 	<loggers>
-		<root level="debug">
+		<root level="info">
 			<appender-ref ref="console" />
 		</root>
 		<!-- 3rd party levels -->

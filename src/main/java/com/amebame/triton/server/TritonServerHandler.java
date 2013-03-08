@@ -78,8 +78,10 @@ public class TritonServerHandler extends SimpleChannelUpstreamHandler {
 				}
 				// invoke reflected method
 				Object result = method.invoke(channel, message, body);
-				// send reply
-				sendReply(message.getCallId(), channel, result);
+				if (method.isSynchronous()) {
+					// send reply
+					sendReply(message.getCallId(), channel, result);
+				}
 
 			} catch (Exception e) {
 				// get error code
