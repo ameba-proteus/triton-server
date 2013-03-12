@@ -46,6 +46,8 @@ public class TritonServer {
 			ServerBootstrap bootstrap = injector.getInstance(ServerBootstrap.class);
 			ChannelPipelineFactory pipelineFactory = injector.getInstance(TritonServerPipelineFactory.class);
 			bootstrap.setPipelineFactory(pipelineFactory);
+			bootstrap.setOption("child.tcpNoDelay", true);
+			bootstrap.setOption("child.keepAlive", true);
 			bootstrap.bind(new InetSocketAddress(port));
 			log.info("triton server started on port {}", port);
 		} catch (Exception e) {
