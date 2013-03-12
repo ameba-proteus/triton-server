@@ -24,9 +24,8 @@ public class TritonCassandraClusterConfiguration {
 		// set default consistency to QUORUM
 		.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
 		.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
-		.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
+		.setDiscoveryType(NodeDiscoveryType.NONE)
 		.setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
-		//.setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
 		;
 		poolConfig = new ConnectionPoolConfigurationImpl("astyanax-pool");
 	}
@@ -75,6 +74,20 @@ public class TritonCassandraClusterConfiguration {
 	public TritonCassandraClusterConfiguration setAutoDiscovery(boolean enable) {
 		if (enable) {
 			astyanaxConfig.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE);
+		} else {
+			astyanaxConfig.setDiscoveryType(NodeDiscoveryType.NONE);
+		}
+		return this;
+	}
+	
+	/**
+	 * Set token aware pool type
+	 * @param enable
+	 * @return
+	 */
+	public TritonCassandraClusterConfiguration setTokenAware(boolean enable) {
+		if (enable) {
+			astyanaxConfig.setDiscoveryType(NodeDiscoveryType.TOKEN_AWARE);
 		} else {
 			astyanaxConfig.setDiscoveryType(NodeDiscoveryType.NONE);
 		}
