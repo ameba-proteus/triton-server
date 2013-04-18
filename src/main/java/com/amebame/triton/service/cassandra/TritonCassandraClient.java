@@ -163,7 +163,7 @@ public class TritonCassandraClient implements TritonCleaner {
 	 * @return
 	 */
 	public Keyspace getKeyspace(String clusterName, String keyspaceName) {
-		return getKeyspaceContext(clusterName, keyspaceName).getEntity();
+		return getKeyspaceContext(clusterName, keyspaceName).getClient();
 	}
 	
 	/**
@@ -271,7 +271,7 @@ public class TritonCassandraClient implements TritonCleaner {
 		try {
 			log.info("updating keyspace definition for {} in {}", keyspaceName, clusterName);
 			AstyanaxContext<Keyspace> context = getKeyspaceContext(clusterName, keyspaceName);
-			Keyspace keyspace = context.getEntity();
+			Keyspace keyspace = context.getClient();
 			KeyspaceDefinition definition = keyspace.describeKeyspace();
 			// read all column families
 			for (ColumnFamilyDefinition cfdef : definition.getColumnFamilyList()) {

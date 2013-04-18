@@ -32,7 +32,7 @@ public class KeyspaceHolder {
 	 * @return
 	 */
 	public Keyspace getKeyspace() {
-		return context.getEntity();
+		return context.getClient();
 	}
 	
 	/**

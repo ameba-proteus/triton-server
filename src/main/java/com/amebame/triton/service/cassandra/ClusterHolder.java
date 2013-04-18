@@ -27,7 +27,7 @@ public class ClusterHolder {
 	public ClusterHolder(AstyanaxContext<Cluster> context) {
 		this.context = context;
 		try {
-			Cluster cluster = context.getEntity();
+			Cluster cluster = context.getClient();
 			this.partitioner = IPartitioner.class.cast(Class.forName(cluster.describePartitioner()).newInstance());
 		} catch (ClassNotFoundException | ConnectionException | InstantiationException | IllegalAccessException e) {
 			throw new TritonCassandraException(TritonErrors.cassandra_error, e);
@@ -39,7 +39,7 @@ public class ClusterHolder {
 	 * @return
 	 */
 	public Cluster getCluster() {
-		return context.getEntity();
+		return context.getClient();
 	}
 	
 	/**
