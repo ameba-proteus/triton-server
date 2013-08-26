@@ -1,10 +1,12 @@
 package com.amebame.triton.server;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.jboss.netty.channel.Channel;
 
 import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.exception.TritonException;
@@ -42,7 +44,7 @@ public class TritonServerMethod {
 		return !annotation.async();
 	}
 	
-	public Object invoke(Channel channel, TritonMessage message, JsonNode body) {
+	public Object invoke(ChannelHandlerContext ctx, TritonMessage message, JsonNode body) {
 		
 		// set dynamic parameters
 		try {
@@ -55,7 +57,9 @@ public class TritonServerMethod {
 				} else if (parameterType == JsonNode.class) {
 					args[i] = body;
 				} else if (parameterType == Channel.class) {
-					args[i] = channel;
+					args[i] = ctx.channel();
+				} else if (parameterType == ChannelHandlerContext.class) {
+					args[i] = ctx;
 				} else {
 					if (body == null) {
 						// empty object

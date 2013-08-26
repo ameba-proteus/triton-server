@@ -10,8 +10,6 @@ public class LockSetup {
 	
 	@Inject private TritonServerContext context;
 	
-	@Inject private LockManager manager;
-	
 	@Inject private LockMethods methods;
 	
 	@Inject private LockClearner cleaner;

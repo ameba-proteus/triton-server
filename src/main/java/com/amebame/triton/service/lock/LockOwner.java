@@ -9,10 +9,10 @@
  */
 package com.amebame.triton.service.lock;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amebame.triton.protocol.TritonMessage;
 
@@ -77,7 +77,7 @@ public class LockOwner implements Comparable<LockOwner> {
 		if (!channel.isOpen()) {
 			return false;
 		}
-		ChannelFuture future = channel.write(message);
+		ChannelFuture future = channel.writeAndFlush(message);
 		try {
 			if (future.await(1000L)) {
 				return future.isSuccess();
@@ -96,7 +96,7 @@ public class LockOwner implements Comparable<LockOwner> {
 			return false;
 		}
 		TritonMessage message = new TritonMessage(TritonMessage.REPLY, callId, -1);
-		ChannelFuture future = channel.write(message);
+		ChannelFuture future = channel.writeAndFlush(message);
 		try {
 			if (future.await(1000L)) {
 				return future.isSuccess();
@@ -116,13 +116,5 @@ public class LockOwner implements Comparable<LockOwner> {
 		long thisTime = createTime;
 		long otherTime = o.createTime;
 		return (thisTime < otherTime) ? -1 : (thisTime == otherTime) ? 0 : -1;
-	}
-	
-	@Override
-	public String toString() {
-		return new StringBuilder(64)
-			.append("LockOwner-")
-			.append(channel.getId())
-			.toString();
 	}
 }
