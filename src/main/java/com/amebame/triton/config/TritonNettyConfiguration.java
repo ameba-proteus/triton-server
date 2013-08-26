@@ -2,9 +2,6 @@ package com.amebame.triton.config;
 
 public class TritonNettyConfiguration {
 	
-	// Maximum boss thread
-	private int boss = 2;
-	
 	// Maximum worker thread
 	private int worker = 10;
 	
@@ -12,14 +9,6 @@ public class TritonNettyConfiguration {
 	private int connectTimeout = 5000;
 
 	public TritonNettyConfiguration() {
-	}
-
-	public int getBoss() {
-		return boss;
-	}
-
-	public void setBoss(int boss) {
-		this.boss = boss;
 	}
 
 	public int getWorker() {

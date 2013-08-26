@@ -1,8 +1,8 @@
 package com.amebame.triton.service.lock.method;
 
-import javax.inject.Inject;
+import io.netty.channel.Channel;
 
-import org.jboss.netty.channel.Channel;
+import javax.inject.Inject;
 
 import com.amebame.triton.client.lock.method.LockAcquire;
 import com.amebame.triton.client.lock.method.LockRelease;

@@ -1,11 +1,9 @@
 package com.amebame.triton.server;
 
-import java.net.InetSocketAddress;
+import io.netty.bootstrap.ServerBootstrap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -44,11 +42,9 @@ public class TritonServer {
 		try {
 			injector = Guice.createInjector(new TritonModule(configPath));
 			ServerBootstrap bootstrap = injector.getInstance(ServerBootstrap.class);
-			ChannelPipelineFactory pipelineFactory = injector.getInstance(TritonServerPipelineFactory.class);
-			bootstrap.setPipelineFactory(pipelineFactory);
-			bootstrap.setOption("child.tcpNoDelay", true);
-			bootstrap.setOption("child.keepAlive", true);
-			bootstrap.bind(new InetSocketAddress(port));
+			bootstrap
+			.childHandler(injector.getInstance(TritonServerChannelInitializer.class))
+			.bind(port);
 			log.info("triton server started on port {}", port);
 		} catch (Exception e) {
 			log.error("failed to start the server {}", e.getMessage(), e);
@@ -62,7 +58,7 @@ public class TritonServer {
 		}
 		ServerBootstrap bootstrap = injector.getInstance(ServerBootstrap.class);
 		if (bootstrap != null) {
-			bootstrap.shutdown();
+			bootstrap.group().shutdownGracefully();
 		}
 	}
 	

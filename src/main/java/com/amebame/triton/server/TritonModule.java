@@ -1,17 +1,14 @@
 package com.amebame.triton.server;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.concurrent.Executors;
-
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerBossPool;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioWorkerPool;
-import org.jboss.netty.util.ThreadNameDeterminer;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 
 import com.amebame.triton.config.TritonCassandraConfiguration;
 import com.amebame.triton.config.TritonMemcachedConfiguration;
@@ -77,30 +74,22 @@ public class TritonModule extends AbstractModule {
 	}
 	
 	private void configureNetty() {
-		ThreadNameDeterminer determiner = new ThreadNameDeterminer() {
-			@Override
-			public String determineThreadName(String currentThreadName, String proposedThreadName) throws Exception {
-				return currentThreadName;
-			}
-		};
-		ThreadRenamingRunnable.setThreadNameDeterminer(determiner);
-		int boss = config.getNetty().getBoss();
-		NioServerBossPool bossPool = new NioServerBossPool(
-				Executors.newFixedThreadPool(
-						boss, new NamedThreadFactory("triton-boss-")),
-						boss);
-		NioWorkerPool corePool = new NioWorkerPool(
-				Executors.newFixedThreadPool(
-						boss,
-						new NamedThreadFactory("triton-core-")),
-						boss);
-		NioServerSocketChannelFactory channelFactory = new NioServerSocketChannelFactory(bossPool, corePool);
-		ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
-		bind(ChannelFactory.class).toInstance(channelFactory);
+
+		int worker = config.getNetty().getWorker();
+		
+		EventLoopGroup workerGroup = new NioEventLoopGroup(worker, new NamedThreadFactory("triton-server-"));
+		ServerBootstrap bootstrap = new ServerBootstrap()
+		.group(workerGroup)
+		.channel(NioServerSocketChannel.class)
+		.option(ChannelOption.SO_KEEPALIVE, true)
+		.option(ChannelOption.TCP_NODELAY, true)
+		;
+
 		bind(ServerBootstrap.class).toInstance(bootstrap);
 	}
 	
 	private void configureCassandra() {
+
 		if (config.getCassandra() == null) {
 			return;
 		}

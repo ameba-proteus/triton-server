@@ -1,8 +1,8 @@
 package com.amebame.triton.service;
 
-import java.io.IOException;
+import io.netty.channel.ChannelHandlerContext;
 
-import org.jboss.netty.channel.Channel;
+import java.io.IOException;
 
 import com.amebame.triton.server.TritonMethod;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,8 +45,8 @@ public class TritonManagementMethods {
 	 * @throws IOException
 	 */
 	@TritonMethod("triton.close")
-	public void close(Channel channel) throws IOException {
+	public void close(ChannelHandlerContext ctx) throws IOException {
 		// close asynchronously
-		channel.close();
+		ctx.close();
 	}
 }
