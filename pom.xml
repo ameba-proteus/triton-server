@@ -18,6 +18,7 @@
 		<astyanax.version>1.56.42</astyanax.version>
 		<curator.version>1.3.3</curator.version>
 		<cassandra.version>1.2.5</cassandra.version>
+		<elasticsearch.version>0.90.3</elasticsearch.version>
 		<xmemcached.version>1.4.2</xmemcached.version>
 		<guava.version>14.0.1</guava.version>
 		<junit.version>4.11</junit.version>
@@ -148,6 +149,10 @@
 			<version>${cassandra.version}</version>
 			<exclusions>
 				<exclusion>
+					<groupId>io.netty</groupId>
+					<artifactId>netty</artifactId>
+				</exclusion>
+				<exclusion>
 					<groupId>org.apache.httpcomponents</groupId>
 					<artifactId>httpclient</artifactId>
 				</exclusion>
@@ -260,6 +265,13 @@
 					<artifactId>slf4j-api</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		
+		<!-- Elastic Search -->
+		<dependency>
+		    <groupId>org.elasticsearch</groupId>
+		    <artifactId>elasticsearch</artifactId>
+		    <version>${elasticsearch.version}</version>
 		</dependency>
 
 		<!-- Concurrent Linked HashMap -->
