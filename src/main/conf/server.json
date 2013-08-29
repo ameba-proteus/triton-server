@@ -13,5 +13,13 @@
 				"hosts": ["127.0.0.1:11211"]
 			}
 		}
+	},
+	"elasticsearch": {
+		"clusters": {
+			"test": {
+				"hosts": ["127.0.0.1:9300"]
+			}
+		},
+		"timeout": 5000
 	}
 }

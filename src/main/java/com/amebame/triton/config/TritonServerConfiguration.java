@@ -1,6 +1,7 @@
 package com.amebame.triton.config;
 
 
+
 /**
  * Triton Configuration Properties
  */
@@ -17,6 +18,9 @@ public class TritonServerConfiguration {
 	
 	// Zookeeper
 	private TritonZookeeperConfiguration zookeeper;
+	
+	// ElasticSearch
+	private TritonElasticSearchConfiguration elasticsearch;
 	
 	public TritonServerConfiguration() {
 	}
@@ -51,5 +55,13 @@ public class TritonServerConfiguration {
 	
 	public void setZookeeper(TritonZookeeperConfiguration zookeeper) {
 		this.zookeeper = zookeeper;
+	}
+	
+	public TritonElasticSearchConfiguration getElasticsearch() {
+		return elasticsearch;
+	}
+	
+	public void setElasticsearch(TritonElasticSearchConfiguration elasticsearch) {
+		this.elasticsearch = elasticsearch;
 	}
 }
