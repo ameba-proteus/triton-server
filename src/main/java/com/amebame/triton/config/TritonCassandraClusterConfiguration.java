@@ -21,6 +21,8 @@ public class TritonCassandraClusterConfiguration {
 
 	public TritonCassandraClusterConfiguration() {
 		astyanaxConfig = new AstyanaxConfigurationImpl()
+		.setTargetCassandraVersion("1.2")
+		.setCqlVersion("3.0.0")
 		// set default consistency to QUORUM
 		.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
 		.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
