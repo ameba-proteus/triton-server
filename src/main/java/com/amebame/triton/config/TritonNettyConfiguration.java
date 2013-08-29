@@ -3,7 +3,7 @@ package com.amebame.triton.config;
 public class TritonNettyConfiguration {
 	
 	// Maximum worker thread
-	private int worker = 10;
+	private int worker = 100;
 	
 	// Connect timeout for client (default 5sec)
 	private int connectTimeout = 5000;
