@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import com.amebame.triton.config.TritonCassandraConfiguration;
+import com.amebame.triton.config.TritonElasticSearchConfiguration;
 import com.amebame.triton.config.TritonMemcachedConfiguration;
 import com.amebame.triton.config.TritonServerConfiguration;
 import com.amebame.triton.exception.TritonErrors;
@@ -18,6 +19,8 @@ import com.amebame.triton.exception.TritonRuntimeException;
 import com.amebame.triton.json.Json;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
 import com.amebame.triton.service.cassandra.TritonCassandraSetup;
+import com.amebame.triton.service.elasticsearch.TritonElasticSearchClient;
+import com.amebame.triton.service.elasticsearch.TritonElasticSearchSetup;
 import com.amebame.triton.service.lock.LockSetup;
 import com.amebame.triton.service.memcached.TritonMemcachedClient;
 import com.amebame.triton.service.memcached.TritonMemcachedSetup;
@@ -45,6 +48,7 @@ public class TritonModule extends AbstractModule {
 		configureCassandra();
 		configureMemcached();
 		configureLock();
+		configureElasticSearch();
 		// configureHBase();
 		// configureRedis();
 	}
@@ -109,6 +113,15 @@ public class TritonModule extends AbstractModule {
 	
 	private void configureLock() {
 		bind(LockSetup.class).asEagerSingleton();
+	}
+	
+	private void configureElasticSearch() {
+		if (config.getElasticsearch() == null) {
+			return;
+		}
+		bind(TritonElasticSearchConfiguration.class).toInstance(config.getElasticsearch());
+		bind(TritonElasticSearchClient.class).asEagerSingleton();
+		bind(TritonElasticSearchSetup.class).asEagerSingleton();
 	}
 
 }

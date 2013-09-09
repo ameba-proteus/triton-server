@@ -8,7 +8,8 @@ Triton supports middlewares such as
 
 * Cassandra
 * Memcached
-* Distributed Lock (internal implementation)
+* ElasticSearch
+* Distributed Lock (self implemented)
 * MongoDB (not yet implemented)
 * Zookeeper (not yet implemented)
 * HBase (not yet implemented)
