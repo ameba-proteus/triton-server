@@ -5,11 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.After;
@@ -17,19 +13,20 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.amebame.triton.client.TritonClient;
-import com.amebame.triton.client.cassandra.entity.TritonCassandraBatchOperation;
-import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
+import com.amebame.triton.client.cassandra.entity.TritonCassandraTable;
+import com.amebame.triton.client.cassandra.method.BatchOperation;
+import com.amebame.triton.client.cassandra.method.BatchOperationMode;
 import com.amebame.triton.client.cassandra.method.BatchUpdate;
-import com.amebame.triton.client.cassandra.method.CreateColumnFamily;
 import com.amebame.triton.client.cassandra.method.CreateKeyspace;
+import com.amebame.triton.client.cassandra.method.CreateTable;
 import com.amebame.triton.client.cassandra.method.DropKeyspace;
 import com.amebame.triton.client.cassandra.method.GetColumns;
-import com.amebame.triton.client.cassandra.method.ListColumnFamily;
 import com.amebame.triton.client.cassandra.method.ListKeyspace;
+import com.amebame.triton.client.cassandra.method.ListTable;
 import com.amebame.triton.client.cassandra.method.RemoveColumns;
 import com.amebame.triton.client.cassandra.method.SetColumns;
-import com.amebame.triton.client.cassandra.method.TruncateColumnFamily;
+import com.amebame.triton.client.cassandra.method.TruncateTable;
 import com.amebame.triton.exception.TritonClientConnectException;
 import com.amebame.triton.exception.TritonClientException;
 import com.amebame.triton.exception.TritonException;
@@ -62,7 +59,6 @@ public class TritonCassandraClientTest {
 		CreateKeyspace create = new CreateKeyspace();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setReplicationFactor(1);
 		JsonNode result = client.send(create);
 		assertNotNull(result);
 	}
@@ -105,26 +101,25 @@ public class TritonCassandraClientTest {
 	}
 	
 	@Test
-	public void testCreateColumnFamily() throws TritonException {
+	public void testCreateTable() throws TritonException {
 		// create column family
-		CreateColumnFamily create = new CreateColumnFamily();
+		CreateTable create = new CreateTable();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setColumnFamily("test1");
-		create.setKeyValidationClass("UTF8Type");
-		create.setComparator("UTF8Type");
-		create.setDefaultValidationClass("UTF8Type");
+		create.setTable("test1");
+		create.setKeyType("text");
+		create.setColumnType("text");
 		// do create
 		JsonNode result = client.send(create);
 		assertTrue(result.asBoolean());
 		// get result
-		ListColumnFamily list = new ListColumnFamily();
+		ListTable list = new ListTable();
 		list.setCluster(clusterName);
 		list.setKeyspace(keyspaceName);
 		result = client.send(list);
-		List<TritonCassandraColumnFamily> families = Json.convertAsList(result, TritonCassandraColumnFamily.class);
+		List<TritonCassandraTable> families = Json.convertAsList(result, TritonCassandraTable.class);
 		boolean hasTestFamily = false;
-		for (TritonCassandraColumnFamily family : families) {
+		for (TritonCassandraTable family : families) {
 			if (family.getName().equals("test1")) {
 				hasTestFamily = true;
 				log(family);
@@ -139,13 +134,12 @@ public class TritonCassandraClientTest {
 		String familyName = "test_getset";
 		
 		// creating test family
-		CreateColumnFamily create = new CreateColumnFamily();
+		CreateTable create = new CreateTable();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setColumnFamily(familyName);
-		create.setKeyValidationClass("UTF8Type");
-		create.setComparator("UTF8Type");
-		create.setDefaultValidationClass("UTF8Type");
+		create.setTable(familyName);
+		create.setKeyType("text");
+		create.setColumnType("text");
 		JsonNode result = client.send(create);
 		assertTrue(result.asBoolean());
 		
@@ -153,18 +147,19 @@ public class TritonCassandraClientTest {
 		SetColumns set = new SetColumns();
 		set.setCluster(clusterName);
 		set.setKeyspace(keyspaceName);
-		set.setColumnFamily(familyName);
+		set.setTable(familyName);
 		
 		// rows
-		Map<String, Map<String, JsonNode>> rows = new HashMap<>();
-		Map<String, JsonNode> columns = new HashMap<>();
-		columns.put("column1", Json.text("value1"));
-		columns.put("column2", Json.text("value2"));
-		columns.put("column2_1", Json.text("value2_1"));
-		columns.put("column2_2", Json.text("value2_2"));
-		columns.put("column3", Json.object().put("name1", "valuechild").put("name2", 1000));
-		columns.put("column4", Json.number(100));
-		rows.put("row1", columns);
+		ObjectNode rows = Json.object();
+		rows
+		.putObject("row1")
+		.put("column1", "value1")
+		.put("column2", "value2")
+		.put("column2_1", "value2_1")
+		.put("column2_2", "value2_2")
+		.put("column4", 100)
+		.set("column3", Json.object().put("name1", "valuechild").put("name2", 1000))
+		;
 		set.setRows(rows);
 		
 		assertTrue(client.send(set).asBoolean());
@@ -173,11 +168,11 @@ public class TritonCassandraClientTest {
 		GetColumns get = new GetColumns();
 		get.setCluster(clusterName);
 		get.setKeyspace(keyspaceName);
-		get.setColumnFamily(familyName);
+		get.setTable(familyName);
 		// single key
 		get.setKey(Json.text("row1"));
 		// single column
-		get.setColumns(Json.text("column1"));
+		get.setColumn(Json.text("column1"));
 		
 		// get column
 		result = client.send(get);
@@ -278,33 +273,30 @@ public class TritonCassandraClientTest {
 		assertEquals("valuechild", result.get("column3").get("name1").asText());
 		assertEquals(1000, result.get("column3").get("name2").asInt());
 		assertEquals(100, result.get("column4").asInt());
-		
-		
+	
 		// TODO reverse order
 		
 		// put multiple rows
-		rows.clear();
+		rows = Json.object();
 		get.setColumns(null);
-		Map<String, JsonNode> row2 = new HashMap<>();
+		
+		ObjectNode row2 = rows.putObject("row2");
 		row2.put("column1", Json.text("value1"));
 		row2.put("column2", Json.text("value2"));
 		row2.put("column3", Json.text("value3"));
 		
-		Map<String, JsonNode> row3 = new HashMap<>();
+		ObjectNode row3 = rows.putObject("row3");
 		row3.put("column1", Json.text("value1"));
 		row3.put("column3", Json.text("value3"));
 		row3.put("column4", Json.text("value4"));
 		
-		Map<String, JsonNode> row4 = new HashMap<>();
+		ObjectNode row4 = rows.putObject("row4");
 		row4.put("column1", Json.text("value1"));
 		
-		Map<String, JsonNode> row5 = new HashMap<>();
+		ObjectNode row5 = rows.putObject("row5");
 		row5.put("column1", Json.text("value1"));
 		
-		rows.put("row2", row2);
-		rows.put("row3", row3);
-		rows.put("row4", row4);
-		rows.put("row5", row5);
+		set.setRows(rows);
 		
 		assertTrue(client.send(set).asBoolean());
 		
@@ -341,43 +333,40 @@ public class TritonCassandraClientTest {
 		String familyName = "test_remove";
 		
 		// creating test family
-		CreateColumnFamily create = new CreateColumnFamily();
+		CreateTable create = new CreateTable();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setColumnFamily(familyName);
-		create.setKeyValidationClass("UTF8Type");
-		create.setComparator("UTF8Type");
-		create.setDefaultValidationClass("UTF8Type");
+		create.setTable(familyName);
+		create.setKeyType("text");
+		create.setColumnType("text");
 		assertTrue(client.send(create, Boolean.class));
 		
 		// rows
 		SetColumns set = new SetColumns();
-		Map<String, Map<String, JsonNode>> rows = new HashMap<>();
-		Map<String, JsonNode> columns = new HashMap<>();
 		set.setCluster(clusterName);
 		set.setKeyspace(keyspaceName);
-		set.setColumnFamily(familyName);
+		set.setTable(familyName);
+		
+		ObjectNode rows = Json.object();
+		ObjectNode columns = rows.putObject("row1");
 		columns.put("column1", Json.text("value11"));
 		columns.put("column2", Json.text("value12"));
 		columns.put("column3", Json.text("value13"));
-		rows.put("row1", columns);
-		columns = new HashMap<>();
+		columns = rows.putObject("row2");
 		columns.put("column1", Json.text("value21"));
 		columns.put("column2", Json.text("value22"));
 		columns.put("column3", Json.text("value23"));
-		rows.put("row2", columns);
-		columns = new HashMap<>();
-		columns.put("column1", Json.text("lalue31"));
+		columns = rows.putObject("row3");
+		columns.put("column1", Json.text("value31"));
 		columns.put("column2", Json.text("value32"));
 		columns.put("column3", Json.text("value33"));
-		rows.put("row3", columns);
 		set.setRows(rows);
 		assertTrue(client.send(set, Boolean.class));
 		
 		GetColumns get = new GetColumns();
 		get.setCluster(clusterName);
 		get.setKeyspace(keyspaceName);
-		get.setColumnFamily(familyName);
+		get.setTable(familyName);
 		JsonNode result = client.send(get);
 		assertEquals(3, result.size());
 		assertEquals("value11", result.get("row1").get("column1").asText());
@@ -389,13 +378,11 @@ public class TritonCassandraClientTest {
 		RemoveColumns remove = new RemoveColumns();
 		remove.setCluster(clusterName);
 		remove.setKeyspace(keyspaceName);
-		remove.setColumnFamily(familyName);
-		List<String> keys = new ArrayList<>();
-		Map<String, List<String>> removes = new HashMap<>();
+		remove.setTable(familyName);
+		ObjectNode removes = Json.object();
 		// only single row with columns
-		removes.put("row1", Arrays.asList("column1", "column2"));
+		removes.put("row1", Json.array().add("column1").add("column2"));
 		remove.setRows(removes);
-		remove.setKeys(keys);
 		assertTrue(client.send(remove, Boolean.class));
 		
 		result = client.send(get);
@@ -407,11 +394,17 @@ public class TritonCassandraClientTest {
 		assertEquals(3, result.get("row2").size());
 		assertEquals(3, result.get("row3").size());
 		
-		remove.setKey("row2");
-		removes.clear();
+		removes = Json.object();
 		// remove entire row
+		remove.setKey("row2");
+		remove.setRows(null);
 		assertTrue(client.send(remove, Boolean.class));
 		
+		get = new GetColumns();
+		get.setCluster(clusterName);
+		get.setKeyspace(keyspaceName);
+		get.setTable(familyName);
+		//get.setKeys(Json.array().add("row1").add("row2").add("row3"));
 		result = client.send(get);
 		assertEquals(2, result.size());
 		assertFalse(result.has("row2"));
@@ -419,10 +412,10 @@ public class TritonCassandraClientTest {
 		assertTrue(result.has("row3"));
 		
 		// remove multiple row columns
-		removes.clear();
-		keys.clear();
-		removes.put("row1", Arrays.asList("column3"));
-		removes.put("row3", Arrays.asList("column2","column3"));
+		removes = Json.object();
+		removes.putArray("row1").add("column3");
+		removes.putArray("row3").add("column2").add("column3");
+		remove.setRows(removes);
 		assertTrue(client.send(remove, Boolean.class));
 		
 		result = client.send(get);
@@ -441,46 +434,43 @@ public class TritonCassandraClientTest {
 		String familyName = "test_truncate";
 		
 		// creating test family
-		CreateColumnFamily create = new CreateColumnFamily();
+		CreateTable create = new CreateTable();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setColumnFamily(familyName);
-		create.setKeyValidationClass("UTF8Type");
-		create.setComparator("UTF8Type");
-		create.setDefaultValidationClass("UTF8Type");
+		create.setTable(familyName);
+		create.setKeyType("text");
+		create.setColumnType("text");
 		assertTrue(client.send(create, Boolean.class));
 		
 		// rows
 		SetColumns set = new SetColumns();
-		Map<String, Map<String, JsonNode>> rows = new HashMap<>();
-		Map<String, JsonNode> columns = new HashMap<>();
 		set.setCluster(clusterName);
 		set.setKeyspace(keyspaceName);
-		set.setColumnFamily(familyName);
+		set.setTable(familyName);
+		
+		ObjectNode rows = Json.object();
+		ObjectNode columns = rows.putObject("row1");
 		columns.put("column1", Json.text("value11"));
-		rows.put("row1", columns);
-		columns = new HashMap<>();
+		columns = rows.putObject("row2");
 		columns.put("column1", Json.text("value21"));
-		rows.put("row2", columns);
-		columns = new HashMap<>();
-		columns.put("column1", Json.text("lalue31"));
-		rows.put("row3", columns);
+		columns = rows.putObject("row3");
+		columns.put("column1", Json.text("value31"));
 		set.setRows(rows);
 		assertTrue(client.send(set, Boolean.class));
 		
 		GetColumns get = new GetColumns();
 		get.setCluster(clusterName);
 		get.setKeyspace(keyspaceName);
-		get.setColumnFamily(familyName);
+		get.setTable(familyName);
 		
 		JsonNode result = client.send(get);
 		assertEquals(3, result.size());
 		
 		// truncate
-		TruncateColumnFamily truncate = new TruncateColumnFamily();
+		TruncateTable truncate = new TruncateTable();
 		truncate.setCluster(clusterName);
 		truncate.setKeyspace(keyspaceName);
-		truncate.setColumnFamily(familyName);
+		truncate.setTable(familyName);
 		assertTrue(client.send(truncate, Boolean.class));
 		
 		result = client.send(get);
@@ -491,23 +481,21 @@ public class TritonCassandraClientTest {
 	public void testBatch() throws TritonException {
 		
 		// creating batch test family
-		CreateColumnFamily create = new CreateColumnFamily();
+		CreateTable create = new CreateTable();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setColumnFamily("batch1");
-		create.setKeyValidationClass("UTF8Type");
-		create.setComparator("UTF8Type");
-		create.setDefaultValidationClass("UTF8Type");
+		create.setTable("batch1");
+		create.setKeyType("text");
+		create.setColumnType("text");
 		assertTrue(client.send(create, Boolean.class));
 		
 		// creating second batch test family
-		create = new CreateColumnFamily();
+		create = new CreateTable();
 		create.setCluster(clusterName);
 		create.setKeyspace(keyspaceName);
-		create.setColumnFamily("batch2");
-		create.setKeyValidationClass("UTF8Type");
-		create.setComparator("IntegerType");
-		create.setDefaultValidationClass("UTF8Type");
+		create.setTable("batch2");
+		create.setKeyType("text");
+		create.setColumnType("int");
 		assertTrue(client.send(create, Boolean.class));
 		
 		BatchUpdate batch = new BatchUpdate();
@@ -517,25 +505,29 @@ public class TritonCassandraClientTest {
 		// return false if batch is empty
 		assertFalse(client.send(batch, Boolean.class));
 		
-		TritonCassandraBatchOperation operation = new TritonCassandraBatchOperation();
-		operation.setColumnFamily("batch1");
-		operation.putUpdate("row1", "column1", Json.text("value11"));
-		operation.putUpdate("row1", "column2", Json.text("value12"));
-		operation.putUpdate("row2", "column1", Json.text("value21"));
-		batch.addOperation(operation);
+		BatchOperation operation = batch.addSet();
+		operation.setTable("batch1");
 		
-		operation = new TritonCassandraBatchOperation();
-		operation.setColumnFamily("batch2");
-		operation.putUpdate("row1", "100", Json.text("value100"));
-		operation.putUpdate("row2", "200", Json.text("value200"));
-		batch.addOperation(operation);
+		ObjectNode rows = operation.createRows();
+		rows.putObject("row1")
+		.put("column1", "value11")
+		.put("column2", "value12");
+		rows.putObject("row2").put("column1", "value21");
+
+		operation = batch.addSet();
+		operation.setTable("batch2");
+		operation.setMode(BatchOperationMode.set);
+
+		rows = operation.createRows();
+		rows.putObject("row1").put("100", "value100");
+		rows.putObject("row2").put("200", "value200");
+
 		assertTrue(client.send(batch, Boolean.class));
 		
 		GetColumns get = new GetColumns();
 		get.setCluster(clusterName);
 		get.setKeyspace(keyspaceName);
-		get.setColumnFamily("batch1");
-		
+		get.setTable("batch1");
 		get.setKey(Json.text("row1"));
 		
 		JsonNode node = client.send(get);
@@ -551,7 +543,7 @@ public class TritonCassandraClientTest {
 		assertEquals("value21", node.get("column1").asText());
 		assertEquals(1, node.size());
 		
-		get.setColumnFamily("batch2");
+		get.setTable("batch2");
 		get.setKey(Json.text("row1"));
 		node = client.send(get);
 		assertTrue(node.has("100"));
@@ -569,20 +561,19 @@ public class TritonCassandraClientTest {
 		batch.setCluster(clusterName);
 		batch.setKeyspace(keyspaceName);
 		
-		operation = new TritonCassandraBatchOperation();
-		operation.setColumnFamily("batch1");
-		operation.putRemove("row1", "column1");
-		operation.putRemove("row2");
-		batch.addOperation(operation);
+		operation = batch.addRemove();
+		operation.setTable("batch1");
+		rows = operation.createRows();
+		rows.putArray("row1").add("column1");
+		operation.setKey("row2");
 		
-		operation = new TritonCassandraBatchOperation();
-		operation.setColumnFamily("batch2");
-		operation.putRemove("row1");
-		batch.addOperation(operation);
+		operation = batch.addRemove();
+		operation.setTable("batch2");
+		operation.setKey("row1");
 		
 		assertTrue(client.send(batch, Boolean.class));
 		
-		get.setColumnFamily("batch1");
+		get.setTable("batch1");
 		get.setKey(Json.text("row1"));
 		
 		node = client.send(get);
@@ -592,7 +583,7 @@ public class TritonCassandraClientTest {
 		node = client.send(get);
 		assertTrue(node.isNull());
 		
-		get.setColumnFamily("batch2");
+		get.setTable("batch2");
 		get.setKey(Json.text("row1"));
 		node = client.send(get);
 		assertTrue(node.isNull());

@@ -3,7 +3,8 @@
 		"clusters": {
 			"test": {
 				"name": "Test Cluster",
-				"seeds": ["127.0.0.1"]
+				"seeds": ["127.0.0.1"],
+				"consistencyLevel": "ONE"
 			}
 		}
 	}

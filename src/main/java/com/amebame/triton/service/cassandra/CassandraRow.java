@@ -1,19 +1,23 @@
 package com.amebame.triton.service.cassandra;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @JsonInclude(Include.NON_NULL)
-public class CassandraRow<C> {
+public class CassandraRow {
 	
 	private String key;
 	
-	private Object columns;
+	private List<CassandraColumn> columns;
 	
-	public CassandraRow() {
+	public CassandraRow(String key) {
+		this(key, new ArrayList<CassandraColumn>());
 	}
 
-	public CassandraRow(String key, Object columns) {
+	public CassandraRow(String key, List<CassandraColumn> columns) {
 		this.key = key;
 		this.columns = columns;
 	}
@@ -22,8 +26,12 @@ public class CassandraRow<C> {
 		return key;
 	}
 	
-	public Object getColumns() {
+	public List<CassandraColumn> getColumns() {
 		return columns;
+	}
+	
+	public void addColumn(CassandraColumn column) {
+		this.columns.add(column);
 	}
 
 }

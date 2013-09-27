@@ -1,8 +1,6 @@
 package com.amebame.triton.service.cassandra.method;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -11,15 +9,12 @@ import com.amebame.triton.client.cassandra.method.CreateKeyspace;
 import com.amebame.triton.client.cassandra.method.DescribeKeyspace;
 import com.amebame.triton.client.cassandra.method.DropKeyspace;
 import com.amebame.triton.client.cassandra.method.ListKeyspace;
-import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.server.TritonMethod;
 import com.amebame.triton.service.cassandra.CassandraConverter;
 import com.amebame.triton.service.cassandra.TritonCassandraClient;
-import com.amebame.triton.service.cassandra.TritonCassandraException;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.ddl.SchemaChangeResult;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.Session;
 
 public class TritonCassandraKeyspaceMethods {
 	
@@ -32,50 +27,41 @@ public class TritonCassandraKeyspaceMethods {
 	
 	@TritonMethod("cassandra.keyspace.list")
 	public List<TritonCassandraKeyspace> listKeyspaces(ListKeyspace data) {
-		return CassandraConverter.toKeyspaceList(
-				client.getKeyspaceDefinitions(
-						data.getCluster()),
-						true);
+		Cluster cluster = client.getCluster(data.getCluster());
+		return CassandraConverter.toKeyspaceList(cluster.getMetadata().getKeyspaces(), true);
 	}
 	
 	@TritonMethod("cassandra.keyspace.detail")
 	public TritonCassandraKeyspace describeKeyspace(DescribeKeyspace describe) {
-		return CassandraConverter.toKeyspace(
-				client.getKeyspaceDefinition(
-						describe.getCluster(),
-						describe.getKeyspace()));
+		Cluster cluster = client.getCluster(describe.getCluster());
+		Metadata meta = cluster.getMetadata();
+		return CassandraConverter.toKeyspace(meta.getKeyspace(describe.getKeyspace()));
 	}
 	
 	@TritonMethod("cassandra.keyspace.create")
 	public boolean createKeyspace(CreateKeyspace create) {
 		
-		Keyspace keyspace = client.getKeyspace(create.getCluster(), create.getKeyspace());
+		StringBuilder query = new StringBuilder("CREATE KEYSPACE ")
+		.append(create.getKeyspace())
+		.append(" WITH REPLICATION = ");
 		
-		Map<String, Object> options = new HashMap<String, Object>();
-		options.put("strategy_class", create.getStrategyClass());
-		options.put("strategy_options", create.getStrategyOptions());
-		options.put("durable_writes", create.isDurableWrites());
-		
-		try {
-			OperationResult<SchemaChangeResult> result = keyspace.createKeyspace(options);
-			return result != null;
-		} catch (ConnectionException e) {
-			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
+		if (create.getReplication() == null) {
+			query.append("{'class':'SimpleStrategy','replication_factor':3}");
+		} else {
+			query.append(CassandraConverter.toCqlOptions(create.getReplication()));
 		}
+		
+		Session session = client.getSession(create.getCluster());
+		session.execute(query.toString());
+		return true;
 		
 	}
 	
 	@TritonMethod("cassandra.keyspace.drop")
 	public boolean dropKeyspace(DropKeyspace drop) {
-		
-		Keyspace keyspace = client.getKeyspace(drop.getCluster(), drop.getKeyspace());
-		
-		try {
-			OperationResult<SchemaChangeResult> result = keyspace.dropKeyspace();
-			return result != null;
-		} catch (ConnectionException e) {
-			throw new TritonCassandraException(TritonErrors.cassandra_connection_fail, e);
-		}
+		Session session = client.getSession(drop.getCluster());
+		session.execute("DROP KEYSPACE " + drop.getKeyspace());
+		return true;
 		
 	}
 

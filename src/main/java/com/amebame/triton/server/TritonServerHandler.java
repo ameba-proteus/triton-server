@@ -6,7 +6,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import javax.inject.Inject;
 
-import org.apache.cassandra.thrift.InvalidRequestException;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -104,10 +103,6 @@ public class TritonServerHandler extends ChannelInboundHandlerAdapter {
 	private void sendError(int callId, ChannelHandlerContext ctx, int errorCode, Throwable e) {
 		if (callId > 0) {
 			String text = e.getMessage();
-			// swap error message if received cassandra exception
-			if (e.getClass() == InvalidRequestException.class) {
-				text = ((InvalidRequestException) e).getWhy();
-			}
 			TritonMessage message = new TritonMessage(TritonMessage.ERROR, callId, new TritonError(errorCode, text));
 			ctx.writeAndFlush(message);
 			message.release();
