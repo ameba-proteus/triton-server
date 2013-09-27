@@ -1,35 +1,31 @@
 package com.amebame.triton.service.cassandra;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.sql.Date;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.UUID;
+
+import org.apache.commons.codec.binary.Base64;
 
 import com.amebame.triton.client.cassandra.entity.TritonCassandraCluster;
-import com.amebame.triton.client.cassandra.entity.TritonCassandraColumnFamily;
 import com.amebame.triton.client.cassandra.entity.TritonCassandraKeyspace;
+import com.amebame.triton.client.cassandra.entity.TritonCassandraTable;
 import com.amebame.triton.client.cassandra.method.Consistency;
 import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.json.Json;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.TableMetadata;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.netflix.astyanax.Serializer;
-import com.netflix.astyanax.ddl.ColumnFamilyDefinition;
-import com.netflix.astyanax.ddl.KeyspaceDefinition;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.serializers.AsciiSerializer;
-import com.netflix.astyanax.serializers.BooleanSerializer;
-import com.netflix.astyanax.serializers.ByteBufferSerializer;
-import com.netflix.astyanax.serializers.BytesArraySerializer;
-import com.netflix.astyanax.serializers.DoubleSerializer;
-import com.netflix.astyanax.serializers.FloatSerializer;
-import com.netflix.astyanax.serializers.Int32Serializer;
-import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
+import com.fasterxml.jackson.databind.util.ISO8601Utils;
 
 public class CassandraConverter {
 	
@@ -48,32 +44,24 @@ public class CassandraConverter {
 	}
 	
 	/**
-	 * Convert {@link ColumnFamilyDefinition} to {@link TritonCassandraColumnFamily}.
+	 * Convert {@link ColumnFamilyDefinition} to {@link TritonCassandraTable}.
 	 */
-	public static TritonCassandraColumnFamily convertColumnFamily(ColumnFamilyDefinition definition) {
-		TritonCassandraColumnFamily cf = new TritonCassandraColumnFamily();
-		cf.setName(definition.getName());
-		cf.setCaching(definition.getCaching());
-		cf.setComment(definition.getComment());
-		cf.setCompactionStrategy(definition.getCompactionStrategy());
-		cf.setCompactionStrategyOptions(definition.getCompactionStrategyOptions());
-		cf.setComparatorType(definition.getComparatorType());
-		cf.setCompressionOptions(definition.getCompressionOptions());
-		cf.setDefaultValidationClass(definition.getDefaultValidationClass());
-		cf.setGcGraceSeconds(definition.getGcGraceSeconds());
-		cf.setKeyValidationClass(definition.getKeyValidationClass());
-		return  cf;
+	public static TritonCassandraTable convertTable(TableMetadata meta) {
+		TritonCassandraTable cf = new TritonCassandraTable();
+		cf.setName(meta.getName());
+		cf.setOptions(Json.tree(meta.getOptions()));
+		return cf;
 	}
 	
 	/**
-	 * Convert list of {@link ColumnFamilyDefinition} to {@link TritonCassandraColumnFamily}.
+	 * Convert list of {@link ColumnFamilyDefinition} to {@link TritonCassandraTable}.
 	 * @param definition
 	 * @return
 	 */
-	public static List<TritonCassandraColumnFamily> toColumnFamilyList(List<ColumnFamilyDefinition> definitions) {
-		List<TritonCassandraColumnFamily> families = new ArrayList<>(definitions.size());
-		for (ColumnFamilyDefinition definition : definitions) {
-			families.add(convertColumnFamily(definition));
+	public static List<TritonCassandraTable> toTableList(Collection<TableMetadata> metaList) {
+		List<TritonCassandraTable> families = new ArrayList<>(metaList.size());
+		for (TableMetadata meta : metaList) {
+			families.add(convertTable(meta));
 		}
 		return families;
 	}
@@ -83,12 +71,11 @@ public class CassandraConverter {
 	 * @param definition
 	 * @return
 	 */
-	public static TritonCassandraKeyspace toKeyspace(KeyspaceDefinition definition) {
+	public static TritonCassandraKeyspace toKeyspace(KeyspaceMetadata meta) {
 		TritonCassandraKeyspace keyspace = new TritonCassandraKeyspace();
-		keyspace.setName(definition.getName());
-		keyspace.setStrategyClass(definition.getStrategyClass());
-		keyspace.setStrategyOptions(definition.getStrategyOptions());
-		keyspace.setColumnFamilies(toColumnFamilyList(definition.getColumnFamilyList()));
+		keyspace.setName(meta.getName());
+		keyspace.setReplication(meta.getReplication());
+		keyspace.setTables(toTableList(meta.getTables()));
 		return keyspace;
 	}
 	
@@ -97,14 +84,14 @@ public class CassandraConverter {
 	 * @param definitions
 	 * @return
 	 */
-	public static List<TritonCassandraKeyspace> toKeyspaceList(List<KeyspaceDefinition> definitions, boolean skipSystem) {
+	public static List<TritonCassandraKeyspace> toKeyspaceList(List<KeyspaceMetadata> metaList, boolean skipSystem) {
 		List<TritonCassandraKeyspace> keyspaces = new ArrayList<>();
-		for (KeyspaceDefinition definition : definitions) {
+		for (KeyspaceMetadata meta : metaList) {
 			// skip system
-			if (skipSystem && definition.getName().startsWith("system")) {
+			if (skipSystem && meta.getName().startsWith("system")) {
 				continue;
 			}
-			keyspaces.add(toKeyspace(definition));
+			keyspaces.add(toKeyspace(meta));
 		}
 		return keyspaces;
 	}
@@ -116,25 +103,52 @@ public class CassandraConverter {
 	 */
 	public static ConsistencyLevel consistency(Consistency consistency) {
 		if (consistency == Consistency.all) {
-			return ConsistencyLevel.CL_ALL;
+			return ConsistencyLevel.ALL;
 		} else if (consistency == Consistency.any) {
-			return ConsistencyLevel.CL_ANY;
+			return ConsistencyLevel.ANY;
 		} else if (consistency == Consistency.each_quorum) {
-			return ConsistencyLevel.CL_EACH_QUORUM;
+			return ConsistencyLevel.EACH_QUORUM;
 		} else if (consistency == Consistency.local_quorum) {
-			return ConsistencyLevel.CL_LOCAL_QUORUM;
+			return ConsistencyLevel.LOCAL_QUORUM;
 		} else if (consistency == Consistency.one) {
-			return ConsistencyLevel.CL_ONE;
+			return ConsistencyLevel.ONE;
 		} else if (consistency == Consistency.quorum) {
-			return ConsistencyLevel.CL_QUORUM;
+			return ConsistencyLevel.QUORUM;
 		} else if (consistency == Consistency.two) {
-			return ConsistencyLevel.CL_TWO;
+			return ConsistencyLevel.TWO;
 		} else if (consistency == Consistency.three) {
-			return ConsistencyLevel.CL_THREE;
+			return ConsistencyLevel.THREE;
 		} else {
 			throw new TritonCassandraException(
 					TritonErrors.cassandra_invalid_consistency,
 					"invalid consistency level " + consistency.toString());
+		}
+	}
+	
+	public static final Object toObject(JsonNode value, DataType dataType) {
+		Class<?> javaClass = dataType.asJavaClass();
+		if (javaClass == String.class) {
+			return value.asText();
+		} else if (javaClass == Integer.class) {
+			return value.asInt();
+		} else if (javaClass == Long.class) {
+			return value.asLong();
+		} else if (javaClass == BigDecimal.class) {
+			return value.decimalValue();
+		} else if (javaClass == Double.class) {
+			return value.asDouble();
+		} else if (javaClass == Float.class) {
+			return value.asDouble();
+		} else if (javaClass == Boolean.class) {
+			return value.asBoolean();
+		} else if (javaClass == Date.class) {
+			return ISO8601Utils.parse(value.asText());
+		} else if (javaClass == UUID.class) {
+			return UUID.fromString(value.asText());
+		} else if (javaClass == ByteBuffer.class) {
+			return ByteBuffer.wrap(Base64.decodeBase64(value.asText().getBytes()));
+		} else {
+			throw new TritonCassandraException(TritonErrors.cassandra_unsupported_datatype, javaClass + " is not supported");
 		}
 	}
 	
@@ -144,36 +158,54 @@ public class CassandraConverter {
 	 * @param serializer
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
-	public static final <E> E toObject(String value, Serializer<E> serializer) {
-		Class<?> serializerClass = serializer.getClass();
-		if (serializerClass == StringSerializer.class) {
-			return (E) value;
-		} else if (serializerClass == IntegerSerializer.class || serializerClass == Int32Serializer.class) {
-			return (E) Integer.valueOf(value);
-		} else if (serializerClass == LongSerializer.class) {
-			return (E) Long.valueOf(value);
-		} else if (serializerClass == DoubleSerializer.class) {
-			return (E) Double.valueOf(value);
-		} else if (serializerClass == FloatSerializer.class) {
-			return (E) Float.valueOf(value);
-		} else if (serializerClass == BooleanSerializer.class) {
-			return (E) Boolean.valueOf(value);
+	public static final Object toObject(String value, DataType dataType) {
+		Class<?> javaClass = dataType.asJavaClass();
+		if (javaClass == String.class) {
+			return value;
+		} else if (javaClass == Integer.class) {
+			return Integer.valueOf(value);
+		} else if (javaClass == Long.class) {
+			return Long.valueOf(value);
+		} else if (javaClass == BigDecimal.class) {
+			return new BigDecimal(value);
+		} else if (javaClass == Double.class) {
+			return Double.valueOf(value);
+		} else if (javaClass == Float.class) {
+			return Float.valueOf(value);
+		} else if (javaClass == Boolean.class) {
+			return Boolean.valueOf(value);
+		} else if (javaClass == Date.class) {
+			return ISO8601Utils.parse(value);
+		} else if (javaClass == UUID.class) {
+			return UUID.fromString(value);
+		} else if (javaClass == ByteBuffer.class) {
+			return ByteBuffer.wrap(Base64.decodeBase64(value.getBytes()));
 		} else {
-			return serializer.fromByteBuffer(serializer.fromString(value));
+			throw new TritonCassandraException(TritonErrors.cassandra_unsupported_datatype, javaClass + " is not supported");
 		}
 	}
 	
 	/**
-	 * Convert values to element which is serializable by serializer.
+	 * Convert values to element.
 	 * @param values
-	 * @param serializer
+	 * @param dataType
 	 * @return
 	 */
-	public static final <E> List<E> toObjectList(List<String> values, Serializer<E> serializer) {
-		List<E> list = new ArrayList<>(values.size());
-		for (String value : values) {
-			list.add(toObject(value, serializer));
+	public static final List<Object> toObjectList(List<String> values, DataType dataType) {
+		return Arrays.asList(toObjectArray(values, dataType));
+	}
+	
+	/**
+	 * Convert values to element array.
+	 * @param values
+	 * @param dataType
+	 * @return
+	 */
+	public static final Object[] toObjectArray(List<String> values, DataType dataType) {
+		int size = values.size();
+		Object[] list = new Object[values.size()];
+		for (int i = 0; i < size; i++) {
+			list[i] = toObject(values.get(i), dataType);
 		}
 		return list;
 	}
@@ -184,20 +216,64 @@ public class CassandraConverter {
 	 * @param serializer
 	 * @return
 	 */
-	public static final <E> List<E> toObjectList(JsonNode node, Serializer<E> serializer) {
-		List<E> list = new ArrayList<>();
+	public static final List<Object> toObjectList(JsonNode node, DataType dataType) {
+		return Arrays.asList(toObjectArray(node, dataType));
+	}
+
+	/**
+	 * Convert json node to object list.
+	 * @param node
+	 * @param serializer
+	 * @return
+	 */
+	public static final Object[] toObjectArray(JsonNode node, DataType dataType) {
 		if (node.isArray()) {
+			Object[] list = new Object[node.size()];
 			ArrayNode array = (ArrayNode) node;
 			int size = array.size();
 			for (int i = 0; i < size; i++) {
 				JsonNode item = array.get(i);
-				list.add(toObject(item.asText(), serializer));
+				list[i] = toObject(item.asText(), dataType);
 			}
+			return list;
 		} else {
-			list.add(toObject(node.asText(), serializer));
+			Object[] list = new Object[] { toObject(node.asText(), dataType) };
+			return list;
 		}
-		return list;
 	}
+
+	/**
+	 * Convert map to option string.
+	 * @param options
+	 * @return
+	 */
+	public static String toCqlOptions(Map<String, Object> options) {
+		if (options == null || options.isEmpty()) {
+			return "{}";
+		}
+		StringBuilder b = new StringBuilder(128);
+		for (Entry<String, Object> option : options.entrySet()) {
+			if (b.length() == 0) {
+				b.append('{');
+			} else {
+				b.append(',');
+			}
+			b.append('\'');
+			b.append(option.getKey());
+			b.append('\'');
+			b.append(':');
+			if (option.getValue().getClass() == String.class) {
+				b.append('\'');
+				b.append(option.getValue());
+				b.append('\'');
+			} else {
+				b.append(option.getValue());
+			}
+		}
+		b.append('}');
+		return b.toString();
+	}
+	
 	
 	/**
 	 * Convert object to string value.
@@ -205,99 +281,21 @@ public class CassandraConverter {
 	 * @param serializer
 	 * @return
 	 */
-	public static final <E> String toString(E value, Serializer<E> serializer) {
-		Class<?> serializerClass = serializer.getClass();
-		if (serializerClass == StringSerializer.class) {
+	public static final String toString(Object value) {
+		if (value instanceof String) {
 			// return value.
 			return (String) value;
-		} else if (serializerClass == IntegerSerializer.class ||
-				serializerClass == Int32Serializer.class ||
-				serializerClass == LongSerializer.class ||
-				serializerClass == DoubleSerializer.class ||
-				serializerClass == FloatSerializer.class ||
-				serializerClass == BooleanSerializer.class) {
-			// return normal string for primitive values.
+		} else if (value instanceof Date) {
+			// return date
+			return ISO8601Utils.format((Date) value);
+		} else if (value instanceof ByteBuffer) {
+			ByteBuffer buffer = (ByteBuffer) value;
+			byte[] bytes = new byte[buffer.limit()];
+			buffer.get(bytes);
+			return new String(Base64.encodeBase64(bytes));
+		} else {
 			return value.toString();
-		} else {
-			// return string value through serializing.
-			return serializer.getString(serializer.toByteBuffer(value));
 		}
-	}
-	
-	/**
-	 * Convet json node to object which can serialize by the serializer.
-	 * @param value
-	 * @param serializer
-	 * @return
-	 */
-	public static final ByteBuffer toValueBuffer(JsonNode value, Serializer<?> serializer) {
-		Class<?> serializerClass = serializer.getClass();
-		if (serializerClass == BytesArraySerializer.class
-				|| serializerClass == ByteBufferSerializer.class
-				|| serializerClass == StringSerializer.class
-				|| serializerClass == AsciiSerializer.class) {
-			// write as JSON object
-			return Json.buffer(value);
-		} else {
-			// write as specific format from text
-			return serializer.fromString(value.asText());
-		}
-	}
-	
-	/**
-	 * Convert binary value to JsonNode with {@link Serializer}
-	 * @param bytes
-	 * @param serializer
-	 * @return
-	 */
-	public static final JsonNode toValueNode(byte[] bytes, Serializer<?> serializer) {
-		Class<?> serializerClass = serializer.getClass();
-		if (serializerClass == BytesArraySerializer.class
-				|| serializerClass == ByteBufferSerializer.class
-				|| serializerClass == StringSerializer.class
-				|| serializerClass == AsciiSerializer.class) {
-			// make json tree from stored binary
-			return Json.tree(bytes);
-		} else {
-			// Make json node from serialized value
-			return Json.tree(serializer.fromBytes(bytes));
-		}
-	}
-	
-	/**
-	 * Convert {@link ColumnList} to List of {@link CassandraColumn}
-	 * @param columns
-	 * @param columnSerializer
-	 * @return
-	 */
-	public static final <C> List<CassandraColumn<C>> toCassandraColumnList(ColumnList<C> columns, Serializer<C> columnSerializer) {
-		List<CassandraColumn<C>> list = new ArrayList<>(columns.size());
-		for (Column<C> column : columns) {
-			list.add(new CassandraColumn<>(
-					column.getName(),
-					CassandraConverter.toValueNode(column.getByteArrayValue(), columnSerializer),
-					column.getTimestamp()
-					));
-		}
-		return list;
-	}
-	
-	/**
-	 * Convert {@link ColumnList} to Map of {@link String} and {@link JsonNode}
-	 * @param columns
-	 * @param columnSerializer
-	 * @param valueSerializer
-	 * @return
-	 */
-	public static final <C,V> Map<String, JsonNode> toCassandraColumnMap(ColumnList<C> columns, Serializer<C> columnSerializer, Serializer<V> valueSerializer) {
-		Map<String, JsonNode> map = new HashMap<>(columns.size());
-		for (Column<C> column : columns) {
-			map.put(
-					CassandraConverter.toString(column.getName(), columnSerializer),
-					CassandraConverter.toValueNode(column.getByteArrayValue(), valueSerializer)
-					);
-		}
-		return map;
 	}
 	
 }

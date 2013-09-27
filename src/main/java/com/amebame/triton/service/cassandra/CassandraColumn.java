@@ -5,26 +5,24 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @JsonInclude(Include.NON_NULL)
-public class CassandraColumn<C> {
+public class CassandraColumn {
 	
-	private C column;
+	private Object column;
 	private JsonNode value;
-	private long timestamp;
 
 	public CassandraColumn() {
 	}
 	
-	public CassandraColumn(C column, JsonNode value, long timestamp) {
+	public CassandraColumn(Object column, JsonNode value) {
 		this.column = column;
 		this.value = value;
-		this.timestamp = timestamp;
 	}
 
-	public C getColumn() {
+	public Object getColumn() {
 		return column;
 	}
 
-	public void setColumn(C column) {
+	public void setColumn(Object column) {
 		this.column = column;
 	}
 
@@ -36,12 +34,4 @@ public class CassandraColumn<C> {
 		this.value = value;
 	}
 	
-	public long getTimestamp() {
-		return timestamp;
-	}
-	
-	public void setTimestamp(long timestamp) {
-		this.timestamp = timestamp;
-	}
-
 }
