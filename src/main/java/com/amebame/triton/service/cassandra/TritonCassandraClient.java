@@ -69,7 +69,7 @@ public class TritonCassandraClient implements TritonCleaner {
 						new QueryOptions()
 						.setConsistencyLevel(clusterConfig.getConsistencyLevel())
 						.setSerialConsistencyLevel(clusterConfig.getSerialConsistencyLevel())
-						.setFetchSize(Integer.MAX_VALUE) // TODO workaround to prevent bugs in cassandra 2.0.0 pager
+						// .setFetchSize(Integer.MAX_VALUE) // TODO workaround to prevent bugs in cassandra 2.0.0 pager
 				)
 				;
 		if (clusterConfig.hasCredential()) {
