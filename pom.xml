@@ -4,14 +4,14 @@
 
 	<groupId>com.amebame.triton</groupId>
 	<artifactId>triton-server</artifactId>
-	<version>2.0.0-SNAPSHOT</version>
+	<version>1.1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>triton-server</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<client.version>1.1.0-SNAPSHOT</client.version>
+		<client.version>1.1.0</client.version>
 		<guice.version>3.0</guice.version>
 		<log4j.version>2.0-beta9</log4j.version>
 		<jcommander.version>1.32</jcommander.version>
