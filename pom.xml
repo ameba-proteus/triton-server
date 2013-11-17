@@ -10,19 +10,18 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<client.version>1.1.0-SNAPSHOT</client.version>
+		<client.version>1.0.2-SNAPSHOT</client.version>
 		<guice.version>3.0</guice.version>
-		<log4j.version>2.0-beta8</log4j.version>
-		<jcommander.version>1.30</jcommander.version>
+		<log4j.version>2.0-beta9</log4j.version>
+		<jcommander.version>1.32</jcommander.version>
 		<concurrentlinkedhashmap.version>1.4</concurrentlinkedhashmap.version>
-		<astyanax.version>1.56.42</astyanax.version>
-		<curator.version>1.3.3</curator.version>
-		<cassandra.version>1.2.5</cassandra.version>
-		<elasticsearch.version>0.90.3</elasticsearch.version>
-		<xmemcached.version>1.4.2</xmemcached.version>
+		<astyanax.version>1.56.43</astyanax.version>
+		<cassandra.version>2.0.2</cassandra.version>
+		<xmemcached.version>1.4.3</xmemcached.version>
 		<guava.version>14.0.1</guava.version>
 		<junit.version>4.11</junit.version>
-		<commons-lang.version>2.6</commons-lang.version>
+        <commons-lang.version>2.6</commons-lang.version>
+		<commons-lang3.version>3.1</commons-lang3.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -169,10 +168,6 @@
 					<artifactId>compress-lzf</artifactId>
 				</exclusion>
 				<exclusion>
-					<groupId>org.apache.cassandra.deps</groupId>
-					<artifactId>avro</artifactId>
-				</exclusion>
-				<exclusion>
 					<groupId>jline</groupId>
 					<artifactId>jline</artifactId>
 				</exclusion>
@@ -224,36 +219,13 @@
 					<groupId>org.slf4j</groupId>
 					<artifactId>slf4j-log4j12</artifactId>
 				</exclusion>
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                </exclusion>
 			</exclusions>
 		</dependency>
 		
-		<!-- Netflix Curator (Zookeeper recipes) -->
-		<!-- 
-		<dependency>
-			<groupId>com.netflix.curator</groupId>
-			<artifactId>curator-recipes</artifactId>
-			<version>${curator.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>log4j</groupId>
-					<artifactId>log4j</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-log4j12</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>jline</groupId>
-					<artifactId>jline</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.jboss.netty</groupId>
-					<artifactId>netty</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		-->
-
 		<!-- xmemcached driver -->
 		<dependency>
 			<groupId>com.googlecode.xmemcached</groupId>
@@ -267,13 +239,6 @@
 			</exclusions>
 		</dependency>
 		
-		<!-- Elastic Search -->
-		<dependency>
-		    <groupId>org.elasticsearch</groupId>
-		    <artifactId>elasticsearch</artifactId>
-		    <version>${elasticsearch.version}</version>
-		</dependency>
-
 		<!-- Concurrent Linked HashMap -->
 		<dependency>
 			<groupId>com.googlecode.concurrentlinkedhashmap</groupId>
@@ -282,10 +247,15 @@
 		</dependency>
 
 		<!-- Commons -->
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>${commons-lang.version}</version>
+        </dependency>
 		<dependency>
-			<groupId>commons-lang</groupId>
-			<artifactId>commons-lang</artifactId>
-			<version>${commons-lang.version}</version>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${commons-lang3.version}</version>
 		</dependency>
 
 		<!-- Logging -->

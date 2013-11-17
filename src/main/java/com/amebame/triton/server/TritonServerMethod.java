@@ -6,7 +6,7 @@ import io.netty.channel.ChannelHandlerContext;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import com.amebame.triton.exception.TritonErrors;
 import com.amebame.triton.exception.TritonException;
