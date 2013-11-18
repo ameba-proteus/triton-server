@@ -3,7 +3,7 @@
 
 	<groupId>com.amebame.triton</groupId>
 	<artifactId>triton-server</artifactId>
-	<version>1.0.4</version>
+	<version>1.0.5-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>triton-server</name>
